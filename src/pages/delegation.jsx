@@ -24,7 +24,7 @@ import {
   delegationData,
 } from "../redux/slice/delegationSlice";
 import { insertDelegationDoneAndUpdate } from "../redux/api/delegationApi";
-import { sendUrgentTaskNotification, sendTaskExtensionNotification } from "../services/whatsappService";
+import { sendUrgentTaskNotification, sendTaskExtensionNotification, isWhatsAppConnected } from "../services/whatsappService";
 import { useMagicToast } from "../context/MagicToastContext";
 import RenderDescription, { MediaViewer } from "../components/RenderDescription";
 import logo from "../assets/Ace_Logoo.jpg";
@@ -763,6 +763,9 @@ function DelegationDataPage() {
         const failedTasks = results.filter(r => r.status === 'error');
 
         // Send WhatsApp notifications for extensions
+        if (!isWhatsAppConnected()) {
+          showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+        }
         for (const task of selectedData) {
           if (task.status === 'extend' && task.next_extend_date) {
             try {

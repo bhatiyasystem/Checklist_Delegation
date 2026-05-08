@@ -15,7 +15,7 @@ const WHATSAPP_PHONE_NUMBER_ID = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
 const WHATSAPP_ACCESS_TOKEN = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
 const WHATSAPP_WABA_ID = import.meta.env.VITE_WHATSAPP_WABA_ID;
 
-const APP_LINK = "https://checklist-delegation-supabase-five.vercel.app/login";
+const APP_LINK = "https://checklistdelegation.vercel.app/login";
 
 /**
  * Check if WhatsApp service is enabled/connected

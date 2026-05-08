@@ -11,7 +11,7 @@ import { assignTaskInTable, uniqueDepartmentData, uniqueDoerNameData, uniqueGive
 import { customDropdownDetails } from "../../redux/slice/settingSlice";
 import supabase from "../../SupabaseClient";
 import CalendarComponent from "../../components/CalendarComponent";
-import { sendTaskAssignmentNotification } from "../../services/whatsappService";
+import { sendTaskAssignmentNotification, isWhatsAppConnected } from "../../services/whatsappService";
 import { useMagicToast } from "../../context/MagicToastContext";
 
 const formatDate = (date) => date ? date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
@@ -821,6 +821,9 @@ export default function ChecklistTask() {
 
             // 4. Send WhatsApp notifications
             try {
+                if (!isWhatsAppConnected()) {
+                    showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+                }
                 if (insertedTasks && insertedTasks.length > 0) {
                     for (const uiTask of tasks) {
                         const freqKey = freqMap[uiTask.frequency]?.toLowerCase();

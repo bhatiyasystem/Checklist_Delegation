@@ -8,7 +8,7 @@ import supabase from "../../SupabaseClient";
 import { useDispatch, useSelector } from "react-redux";
 import { userDetails } from "../../redux/slice/settingSlice";
 import CalendarComponent from "../../components/CalendarComponent";
-import { sendTaskAssignmentNotification } from "../../services/whatsappService";
+import { sendTaskAssignmentNotification, isWhatsAppConnected } from "../../services/whatsappService";
 import { useMagicToast } from "../../context/MagicToastContext";
 
 
@@ -533,6 +533,9 @@ export default function EATask() {
 
             // 4. Send WhatsApp notifications
             try {
+                if (!isWhatsAppConnected()) {
+                    showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+                }
                 if (insertedData && insertedData.length > 0) {
                     for (const task of insertedData) {
                         await sendTaskAssignmentNotification({

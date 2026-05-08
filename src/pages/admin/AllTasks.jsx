@@ -29,7 +29,7 @@ import {
 import TaskManagementTabs from "../../components/TaskManagementTabs";
 import { customDropdownDetails } from "../../redux/slice/settingSlice";
 import { updateRepairData } from "../../redux/api/repairApi";
-import { sendTaskExtensionNotification, sendUrgentTaskNotification } from "../../services/whatsappService";
+import { sendTaskExtensionNotification, sendUrgentTaskNotification, isWhatsAppConnected } from "../../services/whatsappService";
 import AudioPlayer from "../../components/AudioPlayer";
 import { useMagicToast } from "../../context/MagicToastContext";
 import RenderDescription from "../../components/RenderDescription";
@@ -911,6 +911,9 @@ const AllTasks = () => {
 
             // Send extension notification
             if (task) {
+              if (!isWhatsAppConnected()) {
+                showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+              }
               await sendTaskExtensionNotification({
                 doerName: task.doer_name,
                 taskId: task.task_id,
@@ -998,6 +1001,9 @@ const AllTasks = () => {
 
     setIsSubmitting(true);
     try {
+      if (!isWhatsAppConnected()) {
+        showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+      }
       const selectedTasks = tasks.filter(t => selectedItems.has(t.id));
 
       for (const task of selectedTasks) {
@@ -1223,7 +1229,7 @@ const AllTasks = () => {
                           </th>
                         )}
                         {tableHeaders.map((header) => (
-                          <th key={header.id} className="px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          <th key={header.id} className={`px-3 sm:px-6 py-3 sm:py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap ${header.id === 'status' ? 'min-w-[140px]' : ''}`}>
                             {header.label}
                           </th>
                         ))}
@@ -1356,7 +1362,7 @@ const AllTasks = () => {
                             ) : (
                               <>
                                 {tableHeaders.map((header) => (
-                                  <td key={header.id} className={`px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 ${header.id === 'task_description' || header.id === 'issue_description' ? 'min-w-[200px] whitespace-normal' : 'whitespace-nowrap'}`}>
+                                  <td key={header.id} className={`${header.id === 'status' ? 'px-1 sm:px-2 min-w-[140px]' : 'px-3 sm:px-6'} py-3 sm:py-4 text-sm text-gray-800 ${header.id === 'task_description' || header.id === 'issue_description' ? 'min-w-[200px] whitespace-normal' : 'whitespace-nowrap'}`}>
                                     {header.id === "time_status"
                                       ? (
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getTimeStatus(task[statusDateColumn], task.status) === 'Overdue' ? 'bg-red-100 text-red-800' :
@@ -1394,11 +1400,11 @@ const AllTasks = () => {
                                             ? !showHistory && (activeTab === "maintenance" || activeTab === "checklist" || activeTab === "ea" || activeTab === "delegation")
                                               ? (
                                                 <select
-                                                  value={statusData[task.id] || task.status || ""}
+                                                  value={statusData[task.id] || (['yes', 'done', 'Done'].includes(task.status) ? ((activeTab === 'checklist' || activeTab === 'delegation') ? 'yes' : 'Done') : ['no', 'Not Done'].includes(task.status) ? ((activeTab === 'checklist' || activeTab === 'delegation') ? 'no' : 'Not Done') : task.status) || ""}
                                                   onChange={(e) => setStatusData(prev => ({ ...prev, [task.id]: e.target.value }))}
                                                   disabled={!selectedItems.has(task.id)}
-                                                  className="block w-full py-1.5 pl-3 pr-8 text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-md focus:border-purple-500 focus:outline-none disabled:bg-gray-50/50 disabled:text-gray-400 appearance-none shadow-sm cursor-pointer hover:border-gray-300 transition-colors"
-                                                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
+                                                  className="block w-full py-1.5 pl-2 pr-7 text-xs sm:text-sm text-gray-700 bg-white border border-gray-200 rounded-md focus:border-purple-500 focus:outline-none disabled:bg-gray-50/50 disabled:text-gray-400 appearance-none shadow-sm cursor-pointer hover:border-gray-300 transition-colors"
+                                                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.4rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.2em 1.2em` }}
                                                 >
                                                   <option value="">Select Status</option>
                                                   {activeTab === "ea" ? (

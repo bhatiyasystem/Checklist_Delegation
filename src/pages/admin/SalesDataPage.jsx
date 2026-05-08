@@ -293,7 +293,7 @@ export default function AccountDataPage({ showLayout = true, departmentFilter = 
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Freq</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Enable Reminders</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Require Attachment</th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">Status</th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">Status</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px]">Remarks</th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Upload Image</th>
               </tr>
@@ -380,7 +380,7 @@ export default function AccountDataPage({ showLayout = true, departmentFilter = 
                           className={`w-full text-sm border rounded p-1.5 outline-none focus:border-gray-400 cursor-pointer
                             ${additionalData[item.id] === 'yes' ? 'bg-green-50 border-green-300 text-green-700' :
                               additionalData[item.id] === 'no' ? 'bg-red-50 border-red-300 text-red-700' : 'border-gray-300 text-gray-600'}`}
-                          value={additionalData[item.id] || ""}
+                          value={additionalData[item.id] || (item.status === 'yes' || item.status === 'Done' ? 'yes' : item.status === 'no' || item.status === 'Not Done' ? 'no' : '')}
                           onChange={e => setAdditionalData(p => ({ ...p, [item.id]: e.target.value }))}
                           disabled={!isSelected}
                         >

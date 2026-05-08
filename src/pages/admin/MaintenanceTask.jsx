@@ -9,7 +9,7 @@ import { customDropdownDetails } from "../../redux/slice/settingSlice";
 import { maintenanceData } from "../../redux/slice/maintenanceSlice";
 import supabase from "../../SupabaseClient";
 import CalendarComponent from "../../components/CalendarComponent";
-import { sendTaskAssignmentNotification, sendUrgentTaskNotification } from "../../services/whatsappService";
+import { sendTaskAssignmentNotification, sendUrgentTaskNotification, isWhatsAppConnected } from "../../services/whatsappService";
 import AudioPlayer from "../../components/AudioPlayer";
 import { useMagicToast } from "../../context/MagicToastContext";
 
@@ -771,6 +771,9 @@ export default function MaintenanceTask() {
 
             // 4. Send WhatsApp notifications
             try {
+                if (!isWhatsAppConnected()) {
+                    showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+                }
                 if (insertedData && insertedData.length > 0) {
                     for (const uiTask of tasks) {
                         const task = insertedData.find(it =>

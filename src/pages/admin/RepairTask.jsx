@@ -8,7 +8,7 @@ import { uniqueGivenByData } from "../../redux/slice/assignTaskSlice";
 import { customDropdownDetails, userDetails } from "../../redux/slice/settingSlice";
 import { ReactMediaRecorder } from "react-media-recorder";
 import supabase from "../../SupabaseClient";
-import { sendTaskAssignmentNotification } from "../../services/whatsappService";
+import { sendTaskAssignmentNotification, isWhatsAppConnected } from "../../services/whatsappService";
 import AudioPlayer from "../../components/AudioPlayer";
 import { useMagicToast } from "../../context/MagicToastContext";
 
@@ -371,6 +371,9 @@ export default function RepairTask() {
 
             // 4. Send WhatsApp notifications
             try {
+                if (!isWhatsAppConnected()) {
+                    showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+                }
                 for (const insertedTask of allResults) {
                     const assignee = insertedTask.assigned_person;
                     if (assignee) {

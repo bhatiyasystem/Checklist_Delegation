@@ -8,7 +8,7 @@ import { uploadPartImageApi } from '../redux/api/settingApi';
 import supabase from '../SupabaseClient';
 import CalendarComponent from '../components/CalendarComponent';
 import { createPortal } from 'react-dom';
-import { sendTaskReassignmentNotification } from '../services/whatsappService';
+import { sendTaskReassignmentNotification, isWhatsAppConnected } from '../services/whatsappService';
 import { useMagicToast } from '../context/MagicToastContext';
 
 const formatDateLong = (date) => date ? date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
@@ -369,6 +369,9 @@ const Setting = () => {
 
       // Send WhatsApp Notifications for shifted tasks
       if (tasksToShift.length > 0) {
+        if (!isWhatsAppConnected()) {
+          showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+        }
         for (const task of tasksToShift) {
           await sendTaskReassignmentNotification({
             newDoerName: shiftToPerson,

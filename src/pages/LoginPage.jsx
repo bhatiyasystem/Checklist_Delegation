@@ -8,7 +8,7 @@ import { loginUser } from "../redux/slice/loginSlice"
 import { LoginCredentialsApi } from "../redux/api/loginApi"
 import { useMagicToast } from "../context/MagicToastContext"
 import supabase from "../SupabaseClient"
-import { sendPasswordResetOTP } from "../services/whatsappService"
+import { sendPasswordResetOTP, isWhatsAppConnected } from "../services/whatsappService"
 import { KeyRound, ShieldCheck, User as UserIcon, ArrowLeft, RefreshCw, Smartphone } from "lucide-react"
 
 const LoginPage = () => {
@@ -200,11 +200,15 @@ const LoginPage = () => {
                           const { data, error } = await supabase.from('users').select('user_name').eq('user_name', forgotData.username).single();
                           if (error || !data) return showToast("User not found", "error");
 
+                          if (!isWhatsAppConnected()) {
+                            showToast("WhatsApp messaging is currently disabled. It will be enabled later.", "info");
+                          } else {
+                            showToast("OTP sent to Admin", "success");
+                          }
                           const otp = Math.floor(100000 + Math.random() * 900000).toString();
                           await sendPasswordResetOTP(forgotData.username, otp);
                           setForgotData({ ...forgotData, generatedOtp: otp });
                           setForgotStep('otp');
-                          showToast("OTP sent to Admin", "success");
                         } catch (err) {
                           showToast("Error processing request", "error");
                         } finally {

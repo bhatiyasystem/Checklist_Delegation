@@ -8,7 +8,7 @@ import { fetchPendingRepairApprovals, approveRepairTask, rejectRepairTask, fetch
 import { fetchPendingEAApprovals, approveEATaskV2, rejectEATask, fetchApprovedEA } from "../../redux/api/eaApi";
 import { fetchPendingChecklistApprovals, approveChecklistTask, rejectChecklistTask, fetchChecklistHistory } from "../../redux/api/quickTaskApi";
 import { CheckCircle2, Search, Play, Pause, AlertCircle, BookCheck, Wrench, Hammer, Briefcase, XCircle, History, Clock, User, Loader2, MessageSquare } from "lucide-react";
-import { sendTaskRejectionNotification, sendAdminExtensionRemarkNotification } from "../../services/whatsappService";
+import { sendTaskRejectionNotification, sendAdminExtensionRemarkNotification, isWhatsAppConnected } from "../../services/whatsappService";
 import AudioPlayer from "../../components/AudioPlayer";
 import { useMagicToast } from "../../context/MagicToastContext";
 import supabase from "../../SupabaseClient";
@@ -55,6 +55,9 @@ export default function AdminApprovalPage() {
             // we dont need to store the remark only send to the user via whatsapp 
             
             // Send notification
+            if (!isWhatsAppConnected()) {
+                showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+            }
             await sendAdminExtensionRemarkNotification({
                 doerName: task.doer_name || task.name || task.filled_by,
                 taskId: task.original_task_id || task.task_id || task.id,
@@ -364,6 +367,9 @@ export default function AdminApprovalPage() {
             }
 
             // Send notification
+            if (!isWhatsAppConnected()) {
+                showToast("WhatsApp notifications are currently disabled. They will be enabled later.", "info");
+            }
             await sendTaskRejectionNotification({
                 doerName: task.doer_name || task.name || task.filled_by,
                 taskId: task.id, // Or visible task ID
