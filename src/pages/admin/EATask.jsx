@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/layout/AdminLayout";
-import { Users, Calendar, Save, ArrowLeft, Loader2, Mic, Square, Trash2, Plus, CheckCircle2, X, Clock } from "lucide-react";
+import { Users, Calendar, Save, ArrowLeft, Loader2, Mic, Square, Trash2, Plus, CheckCircle2, X, Clock, Phone } from "lucide-react";
 import { ReactMediaRecorder } from "react-media-recorder";
 import AudioPlayer from "../../components/AudioPlayer";
 import supabase from "../../SupabaseClient";
@@ -21,12 +21,9 @@ const formatDateISO = (date) => {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 };
-
-const DEFAULT_DOER_NAME = "Sonali Dutta";
-
 const defaultTask = () => ({
     id: Date.now() + Math.random(),
-    doer_name: DEFAULT_DOER_NAME,
+    doer_name: "",
     phone_number: "",
     given_by: (localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : "",
     planned_date: "",
@@ -397,15 +394,6 @@ export default function EATask() {
         combined.sort((a, b) => a.name.localeCompare(b.name));
         if (combined.length !== allDoers.length || allDoers.length === 0) {
             setAllDoers(combined);
-            // Auto-fill phone for tasks that have the default doer but no phone yet
-            const defaultDoer = combined.find(d => d.name === DEFAULT_DOER_NAME);
-            if (defaultDoer) {
-                setTasks(prev => prev.map(t =>
-                    t.doer_name === DEFAULT_DOER_NAME && !t.phone_number
-                        ? { ...t, phone_number: defaultDoer.phone }
-                        : t
-                ));
-            }
         }
     }, [historicalDoers, userData]);
 
@@ -428,7 +416,7 @@ export default function EATask() {
             const lastTask = prev[prev.length - 1];
             return [...prev, {
                 ...defaultTask(),
-                doer_name: lastTask?.doer_name || DEFAULT_DOER_NAME,
+                doer_name: lastTask?.doer_name || "",
                 phone_number: lastTask?.phone_number || ""
             }];
         });
