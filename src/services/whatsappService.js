@@ -6,7 +6,9 @@ import supabase from "../SupabaseClient";
  */
 
 
-// WhatsApp API Configuration
+// Master toggle to enable/disable WhatsApp messaging
+const IS_WHATSAPP_ENABLED = false; // Set to true to enable WhatsApp messages
+
 // WhatsApp API Configuration (Meta Cloud API)
 const WHATSAPP_API_URL = import.meta.env.VITE_WHATSAPP_API_URL || 'https://graph.facebook.com/v21.0';
 const WHATSAPP_PHONE_NUMBER_ID = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
@@ -14,6 +16,12 @@ const WHATSAPP_ACCESS_TOKEN = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
 const WHATSAPP_WABA_ID = import.meta.env.VITE_WHATSAPP_WABA_ID;
 
 const APP_LINK = "https://checklist-delegation-supabase-five.vercel.app/login";
+
+/**
+ * Check if WhatsApp service is enabled/connected
+ * @returns {boolean}
+ */
+export const isWhatsAppConnected = () => IS_WHATSAPP_ENABLED;
 
 
 /**
@@ -80,6 +88,14 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
             return false;
         }
 
+        // Master toggle check
+        if (!IS_WHATSAPP_ENABLED) {
+            console.log('🚫 WhatsApp Messaging is currently DISABLED');
+            console.log(`Recipient: +${formattedPhone}`);
+            console.log(`Message: ${message}`);
+            return true; // Return true to avoid errors in calling components
+        }
+
         // If API credentials are not configured, log to console instead
         if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
             console.log('📱 WhatsApp Message (API not configured):');
@@ -138,6 +154,14 @@ const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], 
         if (!formattedPhone) {
             console.error('Invalid phone number:', phoneNumber);
             return false;
+        }
+
+        // Master toggle check
+        if (!IS_WHATSAPP_ENABLED) {
+            console.log('🚫 WhatsApp Template Messaging is currently DISABLED');
+            console.log(`Template: ${templateName}`);
+            console.log(`To: +${formattedPhone}`);
+            return true;
         }
 
         // If API credentials are not configured, log to console instead
@@ -210,6 +234,13 @@ const sendWhatsAppVoiceMessage = async (phoneNumber, audioUrl) => {
         if (!formattedPhone) {
             console.error('Invalid phone number for voice message:', phoneNumber);
             return false;
+        }
+
+        // Master toggle check
+        if (!IS_WHATSAPP_ENABLED) {
+            console.log('🚫 WhatsApp Voice Messaging is currently DISABLED');
+            console.log(`To: +${formattedPhone}`);
+            return true;
         }
 
         // Development fallback
@@ -711,8 +742,7 @@ export const sendTaskReassignmentNotification = async (taskDetails) => {
  */
 export const sendPasswordResetOTP = async (username, otp) => {
     try {
-        // const adminNumber = "9028105766";
-        const adminNumber = "8827194777";
+        const adminNumber = "9028105766";
         const message = `🔐 *PASSWORD RESET REQUEST*\n\n` +
             `A password reset has been requested for:\n` +
             `👤 User: *${username}*\n` +
