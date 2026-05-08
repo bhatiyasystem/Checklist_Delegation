@@ -224,7 +224,7 @@ const LoginPage = () => {
                   <div className="space-y-4">
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2">
                       <Smartphone className="text-amber-600 flex-shrink-0" size={16} />
-                      <p className="text-[10px] text-amber-800 font-medium">OTP has been sent to the admin number (9691207533). Please contact them for the code.</p>
+                      <p className="text-[10px] text-amber-800 font-medium">OTP has been sent to the admin number (9028105766). Please contact them for the code.</p>
                     </div>
                     <div className="relative">
                       <input
