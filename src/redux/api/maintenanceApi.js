@@ -17,8 +17,7 @@ const parseJsonIfNeeded = (val) => {
 export const fetchMaintenanceDataSortByDate = async (page = 1, limit = 50, searchTerm = '', frequency = '', dateFilter = 'all') => {
     const role = (localStorage.getItem('role') || "").toLowerCase();
     const username = localStorage.getItem('user-name');
-    console.log(`DEBUG: fetchMaintenanceDataSortByDate - Role: ${role}, User: ${username}, Page: ${page}, Frequency: ${frequency}`);
-
+    
     try {
         const from = (page - 1) * limit;
         const to = from + limit - 1;
@@ -85,8 +84,6 @@ export const fetchMaintenanceDataSortByDate = async (page = 1, limit = 50, searc
             console.error("DEBUG: Error in fetchMaintenanceDataSortByDate:", error);
             return { data: [], totalCount: 0 };
         }
-
-        console.log(`DEBUG: fetchMaintenanceDataSortByDate Result: ${data?.length || 0} pending tasks found. Total count: ${count}`);
 
         const cleanedData = (data || []).map(row => ({
             ...row,

@@ -625,7 +625,8 @@ export default function QuickTask() {
     // Deduplicate by task_description + name
     const seen = new Set();
     const unique = searched.filter(task => {
-      const key = `${(task.machine_name || '').trim()}::${(task.part_name || '').trim()}::${(task.part_area || '').trim()}::${(task.task_description || '').trim()}::${(task.name || '').trim()}::${(task.freq || task.frequency || '').trim()}::${(task.task_start_date || task.created_at || '').trim()}`;
+      // Exclude task_start_date to properly group recurring tasks, just like checklist
+      const key = `${(task.machine_name || '').trim()}::${(task.part_name || '').trim()}::${(task.part_area || '').trim()}::${(task.task_description || '').trim()}::${(task.name || '').trim()}::${(task.freq || task.frequency || '').trim()}::${(task.created_at || '').trim()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

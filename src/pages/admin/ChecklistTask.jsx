@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    ClipboardList, Calendar, X, Mic, Square, Trash2, Plus, Save, Loader2, CheckCircle2, Clock, FileCheck, Play, Pause, ExternalLink
+    ClipboardList, Calendar, X, Mic, Square, Trash2, Plus, Save, Loader2, CheckCircle2, Clock, FileCheck, Play, Pause, ExternalLink, Database
 } from "lucide-react";
 import { ReactMediaRecorder } from "react-media-recorder";
 import AdminLayout from "../../components/layout/AdminLayout";
@@ -882,9 +882,18 @@ export default function ChecklistTask() {
                             <p className="text-sm text-gray-500 mt-0.5">Assign one or multiple checklist tasks at once</p>
                         </div>
                     </div>
-                    <button onClick={() => navigate('/dashboard/assign-task')} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all">
-                        <X className="w-5 h-5" />
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => navigate('/dashboard/bulk-import')} 
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-purple-200 text-purple-700 font-bold rounded-xl shadow-sm hover:bg-purple-50 transition-all text-sm"
+                        >
+                            <Database size={16} />
+                            Bulk Import
+                        </button>
+                        <button onClick={() => navigate('/dashboard/assign-task')} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
                 {/* Success Message */}

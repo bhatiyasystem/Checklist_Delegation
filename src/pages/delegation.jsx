@@ -360,7 +360,7 @@ function DelegationDataPage() {
       const priority = { "Overdue": 0, "Today": 1, "Upcoming": 2 };
       return (priority[a.timeStatus] ?? 3) - (priority[b.timeStatus] ?? 3);
     });
-  }, [delegation, debouncedSearchTerm, dateFilter, userRole, username]);
+  }, [delegation, debouncedSearchTerm, dateFilter, userRole, username, doerFilter]);
 
   const filteredHistoryData = useMemo(() => {
     if (!delegation_done) return [];
