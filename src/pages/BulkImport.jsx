@@ -25,6 +25,7 @@ const BulkImport = () => {
   const [holidays, setHolidays] = useState([]);
   const [workingDaySet, setWorkingDaySet] = useState(new Set());
   const [isCalendarLoading, setIsCalendarLoading] = useState(true);
+  const [showFormatModal, setShowFormatModal] = useState(false);
 
   const getLocalDateString = (date) => {
     if (!date) return "";
@@ -64,7 +65,7 @@ const BulkImport = () => {
             .map(s => s.trim())
             .filter(Boolean);
           setWorkingDaySet(new Set(cleanedDates));
-          console.log(`✅ Loaded ${cleanedDates.length} working days from calendar.`);
+          console.log(`âœ… Loaded ${cleanedDates.length} working days from calendar.`);
         }
         setIsCalendarLoading(false);
       } catch (err) {
@@ -156,6 +157,38 @@ const BulkImport = () => {
     return dates;
   };
 
+  const downloadCsvTemplate = () => {
+    const fields = MODULES[activeModule].fields;
+    const headers = fields.map(f => f.label).join(',');
+    const exampleRow = fields.map(f => {
+      if (f.key === 'task_start_date') return '05/09/2026';
+      if (f.key === 'frequency') return activeModule === 'delegation' ? 'One Time (No Recurrence)' : 'Daily';
+      return PLACEHOLDERS[f.key] || '';
+    }).join(',');
+    
+    const csvContent = `${headers}\n${exampleRow}`;
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${activeModule}_template.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast(`${activeModule} template downloaded`, "success");
+  };
+
+  const PLACEHOLDERS = {
+    department: "e.g. Sales / HR",
+    given_by: "e.g. Manager Name",
+    name: "e.g. Staff Name",
+    task_description: "e.g. Daily Cleanup",
+    frequency: activeModule === 'delegation' ? "e.g. One Time (No Recurrence)" : "e.g. Daily / Weekly",
+    duration: "e.g. 30 Mins",
+    task_start_date: "e.g. 5/9/2026",
+  };
+
   const MODULES = {
     checklist: {
       label: 'Checklist',
@@ -169,7 +202,7 @@ const BulkImport = () => {
         { key: 'department', label: 'Department', required: true },
         { key: 'given_by', label: 'Assign From', required: true },
         { key: 'name', label: 'Doer Name', required: true },
-        { key: 'task_description', label: 'Description', required: false },
+        { key: 'task_description', label: 'Description', required: true },
         { key: 'frequency', label: 'Frequency', required: true },
         { key: 'duration', label: 'Duration', required: false },
         { key: 'task_start_date', label: 'Start Date', required: true },
@@ -195,6 +228,12 @@ const BulkImport = () => {
     }
   };
 
+  const updateCsvCell = (rowIndex, columnHeader, newValue) => {
+    const updatedData = [...csvData];
+    updatedData[rowIndex][columnHeader] = newValue;
+    setCsvData(updatedData);
+  };
+
   const steps = [
     { id: 1, label: 'Task Type' },
     { id: 2, label: 'Upload CSV' },
@@ -210,24 +249,65 @@ const BulkImport = () => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      encoding: "UTF-8", // Ensure Hindi/Unicode characters are handled correctly
+      encoding: "UTF-8",
       complete: (results) => {
         setCsvData(results.data);
         setHeaders(results.meta.fields);
 
-        // Auto-mapping
+        // Strict Auto-mapping by Label
         const newMapping = {};
+        const missingFields = [];
+        
         MODULES[activeModule].fields.forEach(field => {
-          const match = results.meta.fields.find(h =>
-            h.toLowerCase().replace(/[^a-z]/g, '') === field.key.toLowerCase().replace(/[^a-z]/g, '') ||
-            h.toLowerCase().includes(field.label.toLowerCase())
+          const match = results.meta.fields.find(h => 
+            h.trim().toLowerCase() === field.label.trim().toLowerCase()
           );
-          if (match) newMapping[field.key] = match;
+          if (match) {
+            newMapping[field.key] = match;
+          } else if (field.required) {
+            missingFields.push(field.label);
+          }
         });
+
+        if (missingFields.length > 0) {
+          showToast(`Invalid CSV! Missing columns: ${missingFields.join(', ')}`, "error");
+          setIsProcessing(false);
+          return;
+        }
+
         setMapping(newMapping);
+        
+        // Duplication Check
+        const seenTasks = new Set();
+        const duplicateTasks = [];
+        const uniqueData = results.data.filter((row, idx) => {
+          const desc = row[newMapping['task_description']]?.trim().toLowerCase();
+          const dept = row[newMapping['department']]?.trim().toLowerCase();
+          const name = row[newMapping['name']]?.trim().toLowerCase();
+          const freq = row[newMapping['frequency']]?.trim().toLowerCase();
+          
+          if (!desc) return true; // Let the required field check handle empty descriptions later
+
+          // Create a composite key to check for "Same task + Same fields"
+          const taskKey = `${desc}|${dept}|${name}|${freq}`;
+          
+          if (seenTasks.has(taskKey)) {
+            duplicateTasks.push({ index: idx + 1, desc });
+            return false;
+          }
+          
+          seenTasks.add(taskKey);
+          return true;
+        });
+
+        if (duplicateTasks.length > 0) {
+          showToast(`Filtered ${duplicateTasks.length} duplicate tasks from CSV.`, "info");
+        }
+
+        setCsvData(uniqueData);
         setIsProcessing(false);
-        setCurrentStep(3);
-        showToast("CSV parsed successfully", "success");
+        setCurrentStep(3); // Jump to Preview/Review
+        showToast("CSV matched and parsed successfully", "success");
       },
       error: (err) => {
         console.error(err);
@@ -270,24 +350,22 @@ const BulkImport = () => {
         if (!dateStr) return null;
         const s = dateStr.trim();
 
-        // Try native parsing first (works for YYYY-MM-DD and YYYY/MM/DD)
-        let d = new Date(s);
-        if (!isNaN(d.getTime())) return d;
-
-        // Try DD-MM-YYYY, DD.MM.YYYY, DD/MM/YYYY
+        // Strict MM/DD/YYYY parsing
         const parts = s.split(/[-./\s]/).filter(Boolean);
         if (parts.length >= 3) {
-          const p0 = parseInt(parts[0], 10);
-          const p1 = parseInt(parts[1], 10);
-          const p2 = parseInt(parts[2], 10);
+          const mm = parseInt(parts[0], 10);
+          const dd = parseInt(parts[1], 10);
+          const yyyy = parseInt(parts[2], 10);
 
-          if (parts[2].length === 4) { // DD-MM-YYYY or MM-DD-YYYY
-            // Assume DD-MM-YYYY (most common in India)
-            return new Date(p2, p1 - 1, p0);
-          } else if (parts[0].length === 4) { // YYYY-MM-DD
-            return new Date(p0, p1 - 1, p2);
+          if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31 && yyyy > 2000) {
+             return new Date(yyyy, mm - 1, dd);
           }
         }
+
+        // Fallback for native parsing
+        let d = new Date(s);
+        if (!isNaN(d.getTime())) return d;
+        
         return null;
       };
 
@@ -395,7 +473,8 @@ const BulkImport = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
+      <AdminLayout>
       <div className="min-h-screen bg-slate-50/50">
         <div className="max-w-6xl mx-auto p-4 sm:p-8">
 
@@ -507,22 +586,15 @@ const BulkImport = () => {
                     <span className="text-slate-400 text-[10px] block mt-2 uppercase tracking-tighter">Extra columns will be ignored automatically.</span>
                   </p>
 
-                  <label className="cursor-pointer group relative">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black shadow-2xl shadow-slate-300 group-hover:bg-purple-600 transition-all flex items-center gap-4"
-                    >
-                      {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
-                      {isProcessing ? 'Analyzing CSV...' : 'Select CSV Template'}
-                    </motion.div>
-                  </label>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setShowFormatModal(true)}
+                    className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black shadow-2xl shadow-slate-300 hover:bg-purple-600 transition-all flex items-center gap-4"
+                  >
+                    <Table className="w-5 h-5" />
+                    CSV Format
+                  </motion.button>
 
                   <div className="mt-12 grid grid-cols-3 gap-8 text-slate-400">
                     <div className="flex flex-col items-center gap-2">
@@ -555,55 +627,33 @@ const BulkImport = () => {
                 animate={{ opacity: 1, x: 0 }}
                 className="flex flex-col lg:flex-row gap-6"
               >
-                {/* Field Mapping Card */}
-                <div className="lg:w-1/3 bg-white rounded-[2rem] shadow-xl border border-slate-100 p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-black text-slate-900 uppercase tracking-widest text-xs">Field Alignment</h3>
-                    <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-                      <Info className="w-4 h-4" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    {MODULES[activeModule].fields.map(field => (
-                      <div key={field.key} className="group flex flex-col gap-2">
-                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                          {field.label} {field.required && <span className="text-red-500">*</span>}
-                          {mapping[field.key] && <CheckCircle2 className="w-3 h-3 text-green-500" />}
-                        </label>
-                        <select
-                          value={mapping[field.key] || ''}
-                          onChange={(e) => setMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
-                          className="w-full text-sm font-bold p-3 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:ring-2 focus:ring-purple-500 transition-all appearance-none"
-                        >
-                          <option value="">Select CSV Column</option>
-                          {headers.map(h => <option key={h} value={h}>{h}</option>)}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleImport}
-                    className="w-full mt-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-purple-200 flex items-center justify-center gap-3"
-                  >
-                    <CheckCircle2 className="w-5 h-5" />
-                    Complete Import
-                  </motion.button>
-                </div>
-
-                {/* Preview Card */}
-                <div className="lg:w-2/3 bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col">
-                  <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                {/* Expanded Preview Card (Mapping Removed) */}
+                <div className="w-full bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col">
+                  <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div>
-                      <h3 className="font-black text-slate-900 text-sm uppercase">Data Preview</h3>
-                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Analyzing top {csvData.length} records</p>
+                      <h3 className="font-black text-slate-900 text-sm uppercase flex items-center gap-2">
+                        <Table className="w-4 h-4 text-purple-600" />
+                        Data Preview & Final Edit
+                      </h3>
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter mt-1">Reviewing {csvData.length} records. You can click any cell to edit.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black text-slate-400 uppercase">Ignoring unknown columns</span>
-                      <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+
+                    <div className="flex items-center gap-4">
+                      <button 
+                        onClick={() => setCurrentStep(2)}
+                        className="px-6 py-3 border-2 border-slate-200 text-slate-500 rounded-xl text-xs font-black hover:bg-slate-50 transition-all uppercase tracking-widest"
+                      >
+                        Re-upload
+                      </button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleImport}
+                        className="px-10 py-3 bg-slate-900 text-white rounded-xl font-black shadow-xl flex items-center justify-center gap-3 hover:bg-purple-600 transition-all uppercase text-xs tracking-widest"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Complete Import
+                      </motion.button>
                     </div>
                   </div>
 
@@ -611,21 +661,51 @@ const BulkImport = () => {
                     <table className="w-full border-collapse">
                       <thead className="bg-white sticky top-0 z-10 shadow-sm">
                         <tr>
-                          {headers.map(h => (
-                            <th key={h} className={`px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest border-b border-slate-100 ${Object.values(mapping).includes(h) ? 'text-purple-600 bg-purple-50/50' : 'text-slate-300'}`}>
-                              {h}
-                            </th>
-                          ))}
+                          {headers.map(h => {
+                            const isMapped = Object.values(mapping).includes(h);
+                            return (
+                              <th key={h} className={`px-6 py-4 text-left text-[9px] font-black uppercase tracking-widest border-b border-slate-100 ${isMapped ? 'text-purple-600 bg-purple-50/50' : 'text-slate-300'}`}>
+                                {h}
+                              </th>
+                            );
+                          })}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {csvData.slice(0, 100).map((row, i) => (
                           <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                            {headers.map(h => (
-                              <td key={h} className={`px-6 py-3 text-xs font-bold ${Object.values(mapping).includes(h) ? 'text-slate-900' : 'text-slate-300 opacity-40 italic'}`}>
-                                {row[h] || '—'}
-                              </td>
-                            ))}
+                            {headers.map(h => {
+                              const isMappedToFrequency = mapping['frequency'] === h;
+                              const isMapped = Object.values(mapping).includes(h);
+
+                              return (
+                                <td key={h} className={`px-4 py-2 border-r border-slate-50 last:border-0`}>
+                                  {isMapped ? (
+                                    isMappedToFrequency ? (
+                                      <select
+                                        value={row[h] || ''}
+                                        onChange={(e) => updateCsvCell(i, h, e.target.value)}
+                                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500"
+                                      >
+                                        <option value="">Select Frequency</option>
+                                        {Object.keys(freqMap).map(f => (
+                                          <option key={f} value={f}>{f}</option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        value={row[h] || ''}
+                                        onChange={(e) => updateCsvCell(i, h, e.target.value)}
+                                        className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none focus:ring-2 focus:ring-purple-500"
+                                      />
+                                    )
+                                  ) : (
+                                    <span className="text-slate-300 opacity-40 italic px-2">{row[h] || '—'}</span>
+                                  )}
+                                </td>
+                              );
+                            })}
                           </tr>
                         ))}
                       </tbody>
@@ -704,6 +784,136 @@ const BulkImport = () => {
         </div>
       </div>
     </AdminLayout>
+
+    {/* Field Alignment Modal */}
+    <AnimatePresence>
+      {showFormatModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowFormatModal(false)}
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-6xl overflow-hidden"
+          >
+            <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-8 text-white relative">
+              <button
+                onClick={() => setShowFormatModal(false)}
+                className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                  <Table className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black tracking-tight">Field Format</h3>
+                  <p className="text-purple-100 text-xs font-bold uppercase tracking-widest">Required CSV Structure</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8">
+              <div className="mb-8">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2 px-1">
+                  <Info className="w-3 h-3" /> Column Header Alignment: Provide data according to format below
+                </p>
+                <div className="overflow-x-auto bg-slate-50 rounded-2xl border border-slate-200 shadow-inner p-1">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr>
+                        {MODULES[activeModule].fields.map((field) => (
+                          <th key={field.key} className="px-6 py-4 text-left border-r border-slate-200 last:border-0 min-w-[140px]">
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[11px] font-black text-slate-900 uppercase tracking-tight whitespace-nowrap">
+                                {field.label}
+                              </span>
+                              {field.required ? (
+                                <span className="text-[8px] font-black text-red-500 uppercase tracking-tighter bg-red-50 px-1.5 py-0.5 rounded w-fit">
+                                  Required
+                                </span>
+                              ) : (
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter bg-slate-100 px-1.5 py-0.5 rounded w-fit">
+                                  Optional
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="bg-white">
+                        {MODULES[activeModule].fields.map((field) => (
+                          <td key={field.key} className="px-6 py-5 border-r border-slate-200 last:border-0 bg-slate-50/30">
+                            <span className="text-[10px] font-bold text-slate-400 italic">
+                              {PLACEHOLDERS[field.key] || "e.g. Sample Data"}
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={downloadCsvTemplate}
+                    className="py-5 bg-white border-2 border-slate-900 text-slate-900 rounded-2xl font-black shadow-lg flex items-center justify-center gap-3 hover:bg-slate-50 transition-all"
+                  >
+                    <Download className="w-5 h-5" />
+                    Download Template
+                  </motion.button>
+
+                  <label className="cursor-pointer group">
+                    <input
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={(e) => {
+                        handleFileUpload(e);
+                        setShowFormatModal(false);
+                      }}
+                    />
+                    <div className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:bg-purple-600 transition-all flex items-center justify-center gap-3">
+                      {isProcessing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                      {isProcessing ? 'Processing...' : 'Upload CSV Now'}
+                    </div>
+                  </label>
+                </div>
+                
+                <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mt-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    <span className="text-[10px] text-slate-500 font-bold uppercase">
+                      Frequency: {activeModule === 'delegation' 
+                        ? 'One Time' 
+                        : 'Daily, Alternate Day, Weekly, Fortnight, Monthly, Quarterly, Half Yearly, Yearly'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                    <span className="text-[10px] text-slate-500 font-bold uppercase">Date Format: MM/DD/YYYY</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+    </>
   );
 };
 
