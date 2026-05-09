@@ -2292,7 +2292,7 @@ const Setting = () => {
                       >
                         <option value="">No Supervisor (Direct Admin)</option>
                         {userData && userData.length > 0 && userData
-                          .filter(u => u.user_name !== userForm.username && u.user_name !== 'admin')
+                          .filter(u => u && u.user_name !== userForm.username && u.user_name !== 'admin')
                           .map((u, i) => (
                             <option key={i} value={u.user_name}>{u.user_name}</option>
                           ))

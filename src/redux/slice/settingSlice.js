@@ -213,7 +213,9 @@ const settingsSlice = createSlice({
       })
       .addCase(createUser.fulfilled, (state, action) => {
         state.loading = false;
-        state.userData.push(action.payload);
+        if (action.payload) {
+          state.userData.push(action.payload);
+        }
       })
       .addCase(departmentOnlyDetails.pending, (state) => {
         state.loading = true;
