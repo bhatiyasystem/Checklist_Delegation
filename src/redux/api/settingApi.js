@@ -107,19 +107,19 @@ export const createUserApi = async (newUser) => {
     const insertData = {
       id: newId,
       user_name: newUser.username,
-      password: newUser.password || null,
-      email_id: newUser.email || null,
-      number: newUser.phone === "" ? null : newUser.phone,
-      employee_id: newUser.employee_id || null,
-      role: newUser.role || 'user',
-      status: newUser.status || 'active',
-      user_access: newUser.user_access || null,
-      department: newUser.department || null,
+      password: newUser.password,
+      email_id: newUser.email,
+      number: newUser.phone,
+      employee_id: newUser.employee_id,
+      role: newUser.role,
+      status: newUser.status,
+      user_access: newUser.user_access,
+      department: newUser.department,
       profile_image: newUser.profile_image || null,
       leave_date: newUser.leave_date || null,
       leave_end_date: newUser.leave_end_date || null,
       remark: newUser.remark || null,
-      reported_by: newUser.reported_by === "" ? null : newUser.reported_by,
+      reported_by: newUser.reported_by,
       can_self_assign: newUser.can_self_assign || false
     };
 
@@ -162,15 +162,15 @@ export const updateUserDataApi = async ({ id, updatedUser }) => {
     // Build the update payload - NEVER include undefined values (causes Supabase 400)
     const updateData = {
       user_name: updatedUser.user_name,
-      email_id: updatedUser.email_id || null,
-      number: updatedUser.number === "" ? null : updatedUser.number,
-      employee_id: updatedUser.employee_id || null,
-      role: updatedUser.role || 'user',
-      status: updatedUser.status || 'active',
-      user_access: updatedUser.user_access || null,
-      department: updatedUser.department || null,
-      profile_image: updatedUser.profile_image || null,
-      reported_by: updatedUser.reported_by === "" ? null : updatedUser.reported_by,
+      email_id: updatedUser.email_id,
+      number: updatedUser.number,
+      employee_id: updatedUser.employee_id,
+      role: updatedUser.role,
+      status: updatedUser.status,
+      user_access: updatedUser.user_access,
+      department: updatedUser.department,
+      profile_image: updatedUser.profile_image,
+      reported_by: updatedUser.reported_by,
       can_self_assign: updatedUser.can_self_assign ?? false
     };
 

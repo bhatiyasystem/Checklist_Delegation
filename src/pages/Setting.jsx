@@ -568,6 +568,12 @@ const Setting = () => {
   // Modified handleAddUser
   const handleAddUser = async (e) => {
     e.preventDefault();
+
+    if (!userForm.phone || userForm.phone.trim() === '') {
+      showToast("Phone number is required", "error");
+      return;
+    }
+
     // Auto-generate employee_id
     const generatedEmpId = `EMP-${Date.now().toString().slice(-6)}`;
 
@@ -612,6 +618,11 @@ const Setting = () => {
 
   const handleUpdateUser = async (e) => {
     e.preventDefault();
+
+    if (!userForm.phone || userForm.phone.trim() === '') {
+      showToast("Phone number is required", "error");
+      return;
+    }
 
     let imageUrl = userForm.profile_image;
     if (profileFile) {
