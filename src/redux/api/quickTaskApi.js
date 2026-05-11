@@ -14,7 +14,7 @@ const parseJsonIfNeeded = (val) => {
 };
 
 // Fetch unique checklist tasks — one row per unique task_description + name combination
-export const fetchChecklistData = async (page = 0, pageSize = 50, nameFilter = '', dateFilter = 'all') => {
+export const fetchChecklistData = async (page = 0, pageSize = 50, nameFilter = '', dateFilter = 'all', deptFilter = '', personFilter = '') => {
   try {
     const FETCH_LIMIT = 10000;
     const role = (localStorage.getItem("role") || "").toLowerCase();
@@ -40,6 +40,14 @@ export const fetchChecklistData = async (page = 0, pageSize = 50, nameFilter = '
 
     if (nameFilter) {
       query = query.or(`task_description.ilike.%${nameFilter}%,name.ilike.%${nameFilter}%`);
+    }
+
+    if (deptFilter) {
+      query = query.eq('department', deptFilter);
+    }
+
+    if (personFilter) {
+      query = query.eq('name', personFilter);
     }
 
     const { data, error } = await query;
@@ -81,7 +89,7 @@ export const fetchChecklistData = async (page = 0, pageSize = 50, nameFilter = '
 };
 
 // Fetch unique delegation tasks — one row per unique task_description + name combination
-export const fetchDelegationData = async (page = 0, pageSize = 50, nameFilter = '', dateFilter = 'all') => {
+export const fetchDelegationData = async (page = 0, pageSize = 50, nameFilter = '', dateFilter = 'all', deptFilter = '', personFilter = '') => {
   try {
     const FETCH_LIMIT = 10000;
     const role = (localStorage.getItem("role") || "").toLowerCase();
@@ -107,6 +115,14 @@ export const fetchDelegationData = async (page = 0, pageSize = 50, nameFilter = 
 
     if (nameFilter) {
       query = query.or(`task_description.ilike.%${nameFilter}%,name.ilike.%${nameFilter}%`);
+    }
+
+    if (deptFilter) {
+      query = query.eq('department', deptFilter);
+    }
+
+    if (personFilter) {
+      query = query.eq('name', personFilter);
     }
 
     const { data, error } = await query;

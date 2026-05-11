@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
-import { Search, ChevronDown, Filter, Trash2, Edit, Save, X, Play, Pause, Mic, Square, Loader2, Plus } from "lucide-react";
+import { Search, ChevronDown, Filter, Trash2, Edit, Save, X, Play, Pause, Mic, Square, Loader2, Plus, UserRound } from "lucide-react";
 import AdminLayout from "../components/layout/AdminLayout";
 import DelegationPage from "./delegation-data";
 import { useDispatch, useSelector } from "react-redux";
@@ -77,6 +77,8 @@ export default function QuickTask() {
   const [searchTerm, setSearchTerm] = useState('');
   const [freqFilter, setFreqFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('all');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [personFilter, setPersonFilter] = useState('');
 
   const requestSort = (key) => {
     let direction = 'asc';
@@ -141,17 +143,17 @@ export default function QuickTask() {
     const handler = setTimeout(() => {
       if (activeTab === 'checklist') {
         dispatch(resetChecklistPagination());
-        dispatch(uniqueChecklistTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm }));
+        dispatch(uniqueChecklistTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm, deptFilter, personFilter }));
       } else if (activeTab === 'delegation') {
         dispatch(resetDelegationPagination());
-        dispatch(uniqueDelegationTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm }));
+        dispatch(uniqueDelegationTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm, deptFilter, personFilter }));
       } else if (activeTab === 'maintenance') {
-        dispatch(maintenanceData({ page: 1, frequency: freqFilter, searchTerm: searchTerm }));
+        dispatch(maintenanceData({ page: 1, frequency: freqFilter, searchTerm: searchTerm, deptFilter, personFilter }));
       }
     }, 500);
 
     return () => clearTimeout(handler);
-  }, [dispatch, activeTab, dateFilter, freqFilter, searchTerm]);
+  }, [dispatch, activeTab, dateFilter, freqFilter, searchTerm, deptFilter, personFilter]);
 
 
   // Add this new function
@@ -706,12 +708,12 @@ export default function QuickTask() {
                     setEditFormData({});
                     if (tab.id === 'checklist') {
                       dispatch(resetChecklistPagination());
-                      dispatch(uniqueChecklistTaskData({ page: 0, pageSize: 50, dateFilter }));
+                      dispatch(uniqueChecklistTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm, deptFilter, personFilter }));
                     } else if (tab.id === 'delegation') {
                       dispatch(resetDelegationPagination());
-                      dispatch(uniqueDelegationTaskData({ page: 0, pageSize: 50, dateFilter }));
+                      dispatch(uniqueDelegationTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm, deptFilter, personFilter }));
                     } else {
-                      dispatch(maintenanceData({ page: 1, frequency: freqFilter, searchTerm: searchTerm }));
+                      dispatch(maintenanceData({ page: 1, frequency: freqFilter, searchTerm: searchTerm, deptFilter, personFilter }));
                     }
                   }}
                 >
@@ -721,7 +723,7 @@ export default function QuickTask() {
             </div>
           </div>
 
-          <div className="flex items-center mt-2">
+          <div className="flex flex-wrap items-center gap-4 mt-2">
             <div className="relative w-full md:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input
@@ -731,6 +733,40 @@ export default function QuickTask() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {/* Department Dropdown */}
+              <div className="relative flex-1 sm:flex-none sm:min-w-[180px]">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                <select
+                  className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-500 appearance-none transition-all"
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((dept, i) => (
+                    <option key={i} value={dept}>{dept}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+              </div>
+
+              {/* Name Dropdown */}
+              <div className="relative flex-1 sm:flex-none sm:min-w-[180px]">
+                <UserRound className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                <select
+                  className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-purple-500 appearance-none transition-all"
+                  value={personFilter}
+                  onChange={(e) => setPersonFilter(e.target.value)}
+                >
+                  <option value="">All Doers</option>
+                  {doersList.map((doer, i) => (
+                    <option key={i} value={doer.user_name}>{doer.user_name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+              </div>
             </div>
           </div>
         </div>

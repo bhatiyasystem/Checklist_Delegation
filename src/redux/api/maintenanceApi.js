@@ -14,7 +14,7 @@ const parseJsonIfNeeded = (val) => {
 };
 
 // Fetch Maintenance Tasks (Active/Pending)
-export const fetchMaintenanceDataSortByDate = async (page = 1, limit = 50, searchTerm = '', frequency = '', dateFilter = 'all') => {
+export const fetchMaintenanceDataSortByDate = async (page = 1, limit = 50, searchTerm = '', frequency = '', dateFilter = 'all', deptFilter = '', personFilter = '') => {
     const role = (localStorage.getItem('role') || "").toLowerCase();
     const username = localStorage.getItem('user-name');
     
@@ -37,6 +37,14 @@ export const fetchMaintenanceDataSortByDate = async (page = 1, limit = 50, searc
         if (searchTerm && searchTerm.trim() !== '') {
             const searchValue = searchTerm.trim();
             query = query.or(`name.ilike.%${searchValue}%,given_by.ilike.%${searchValue}%,department.ilike.%${searchValue}%,machine_name.ilike.%${searchValue}%,part_name.ilike.%${searchValue}%,part_area.ilike.%${searchValue}%,task_description.ilike.%${searchValue}%`);
+        }
+
+        if (deptFilter) {
+            query = query.eq('department', deptFilter);
+        }
+
+        if (personFilter) {
+            query = query.eq('name', personFilter);
         }
 
         if (role === 'hod' && username) {
