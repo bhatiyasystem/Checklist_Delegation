@@ -16,6 +16,8 @@ const MediaViewer = ({ isOpen, onClose, media }) => {
     const isImage = media.type.startsWith('image') || media.type === 'image';
     const isPdf = media.type === 'pdf' || (media.url && media.url.toLowerCase().endsWith('.pdf'));
 
+    const modalSizeClass = "max-w-5xl";
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -25,7 +27,7 @@ const MediaViewer = ({ isOpen, onClose, media }) => {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/95 backdrop-blur-md"
+                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
                     />
                     
                     <motion.div 
@@ -33,7 +35,7 @@ const MediaViewer = ({ isOpen, onClose, media }) => {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 30 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative w-full max-w-5xl max-h-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/20"
+                        className={`relative w-full ${modalSizeClass} max-h-full bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-white/20`}
                     >
                         {/* Modal Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
@@ -49,14 +51,14 @@ const MediaViewer = ({ isOpen, onClose, media }) => {
                                         {isYoutube ? 'YouTube Content' : isVideo ? 'Video Content' : isImage ? 'Image Content' : 'Document Content'}
                                     </span>
                                     <span className="text-sm font-black text-gray-900 truncate max-w-[200px] sm:max-w-md">
-                                        {media.url.split('/').pop().split('?')[0]}
+                                        {(media.url.split('/').pop().split('?')[0])}
                                     </span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
                                 <button 
                                     onClick={() => window.open(media.url, '_blank')}
-                                    className="p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all group lg:flex items-center gap-2 hidden"
+                                    className="p-2.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all group hidden lg:flex items-center gap-2"
                                     title="Open in new tab"
                                 >
                                     <span className="text-xs font-bold uppercase tracking-wider">Expand</span>
@@ -182,46 +184,67 @@ const RenderDescription = ({ text, audioUrl, instructionUrl, instructionType }) 
             types = [instructionType];
         }
 
+        const rules = [];
+        const others = [];
+
+        urls.forEach((attachmentUrl, idx) => {
+            const type = types[idx] || 'link';
+            if (type === 'rule') {
+                rules.push({ url: attachmentUrl, idx });
+            } else {
+                others.push({ url: attachmentUrl, type, idx });
+            }
+        });
+
         return (
-            <div className="flex flex-wrap gap-2 mt-2">
-                {urls.map((attachmentUrl, idx) => {
-                    const type = types[idx] || 'link';
-                    const ytId = getYouTubeId(attachmentUrl);
-                    
-                    let iconLabel = "Reference";
-                    let Icon = LinkIcon;
-                    let colorClass = "text-indigo-700 bg-indigo-50 border-indigo-100";
+            <div className="flex flex-col gap-2 w-full">
+                {rules.map((rule) => (
+                    <div key={`rule-${rule.idx}`} className="mt-1 px-2.5 py-1 bg-rose-50/50 border border-rose-100 rounded-xl w-fit">
+                        <p className="text-[12px] font-bold text-rose-600 leading-relaxed italic">
+                            {rule.url}
+                        </p>
+                    </div>
+                ))}
+                {others.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                        {others.map((item) => {
+                            const ytId = getYouTubeId(item.url);
+                            let iconLabel = "Reference";
+                            let Icon = LinkIcon;
+                            let colorClass = "text-indigo-700 bg-indigo-50 border-indigo-100";
 
-                    if (type === 'video' || ytId) {
-                        iconLabel = "Video";
-                        Icon = Play;
-                        if (ytId) colorClass = "text-red-700 bg-red-50 border-red-100";
-                    } else if (type === 'image') {
-                        iconLabel = "Image";
-                        Icon = ImageIcon;
-                        colorClass = "text-emerald-700 bg-emerald-50 border-emerald-100";
-                    } else if (type === 'pdf') {
-                        iconLabel = "Doc/PDF";
-                        Icon = FileText;
-                        colorClass = "text-blue-700 bg-blue-50 border-blue-100";
-                    }
+                            if (item.type === 'video' || ytId) {
+                                iconLabel = "Video";
+                                Icon = Play;
+                                if (ytId) colorClass = "text-red-700 bg-red-50 border-red-100";
+                            } else if (item.type === 'image') {
+                                iconLabel = "Image";
+                                Icon = ImageIcon;
+                                colorClass = "text-emerald-700 bg-emerald-50 border-emerald-100";
+                            } else if (item.type === 'pdf') {
+                                iconLabel = "Doc/PDF";
+                                Icon = FileText;
+                                colorClass = "text-blue-700 bg-blue-50 border-blue-100";
+                            }
 
-                    return (
-                        <button
-                            key={idx}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                openViewer(attachmentUrl, type);
-                            }}
-                            className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-tight border px-2.5 py-1.5 rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all shadow-sm w-fit ${colorClass}`}
-                            title={`View ${iconLabel}`}
-                        >
-                            <Icon size={12} strokeWidth={3} className={ytId ? 'fill-current' : ''} />
-                            {iconLabel}
-                        </button>
-                    );
-                })}
+                            return (
+                                <button
+                                    key={item.idx}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        openViewer(item.url, item.type);
+                                    }}
+                                    className={`flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-tight border px-2.5 py-1.5 rounded-xl hover:shadow-lg hover:scale-105 active:scale-95 transition-all shadow-sm w-fit ${colorClass}`}
+                                    title={`View ${iconLabel}`}
+                                >
+                                    <Icon size={12} strokeWidth={3} className={ytId ? 'fill-current' : ''} />
+                                    {iconLabel}
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         );
     };

@@ -28,6 +28,7 @@ import HolidayListPage from "./pages/admin/HolidayListPage"         // New
 import WorkingDayCalendarPage from "./pages/admin/WorkingDayCalendarPage" // New
 import AdminApprovalPage from "./pages/admin/AdminApprovalPage" // New
 import NotificationsPage from "./pages/admin/Notifications"
+import TrainingVideo from "./pages/admin/TrainingVideo"
 
 // --- Components ---
 import RealtimeLogoutListener from "./components/RealtimeLogoutListener"
@@ -161,6 +162,15 @@ function App() {
                         element={
                             <ProtectedRoute>
                                 <AllTasks />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/dashboard/training-video"
+                        element={
+                            <ProtectedRoute>
+                                <TrainingVideo />
                             </ProtectedRoute>
                         }
                     />

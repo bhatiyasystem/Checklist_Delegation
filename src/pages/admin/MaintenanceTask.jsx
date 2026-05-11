@@ -326,10 +326,7 @@ const MaintenanceTaskCard = ({
                         <select
                             name="doerDepartment"
                             value={task.doerDepartment}
-                            onChange={(e) => {
-                                handleChange(e);
-                                dispatch(uniqueDoerNameData(e.target.value));
-                            }}
+                            onChange={handleChange}
                             className="w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm"
                         >
                             <option value="">Select Department</option>
@@ -470,7 +467,7 @@ const MaintenanceTaskCard = ({
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> Duration <span className="text-red-500">*</span>
+                                <Clock className="w-3 h-3" /> Duration
                             </label>
                             <div className="relative">
                                 <input
@@ -537,7 +534,7 @@ export default function MaintenanceTask() {
         fetchHolidays();
         dispatch(uniqueDepartmentData());
         dispatch(uniqueGivenByData());
-        dispatch(uniqueDoerNameData("Maintenance"));
+        dispatch(uniqueDoerNameData());
         dispatch(maintenanceData(1));
         dispatch(customDropdownDetails());
     }, [dispatch]);
@@ -656,9 +653,7 @@ export default function MaintenanceTask() {
                 if (!t.doerName || !t.startDate) {
                     return { success: false, message: `Task ${i + 1}: Please fill in Doer's Name and Start Date.` };
                 }
-                if (!t.duration) {
-                    return { success: false, message: `Task ${i + 1}: Please specify the task duration.` };
-                }
+
 
                 if (t.frequency === "one-time") {
                     const dateStr = t.startDate;

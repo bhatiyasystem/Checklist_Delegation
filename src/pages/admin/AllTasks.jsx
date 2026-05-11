@@ -63,10 +63,13 @@ const AllTasks = () => {
   const [statusData, setStatusData] = useState({});
   const [extendedDateData, setExtendedDateData] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [nameFilter, setNameFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateFilter, setDateFilter] = useState("all"); // all, today, overdue, upcoming
-  const [dropdownOpen, setDropdownOpen] = useState({ dateFilter: false });
+  const [deptFilter, setDeptFilter] = useState("all");
+  const [allDepartments, setAllDepartments] = useState([]);
+  const [dropdownOpen, setDropdownOpen] = useState({ dateFilter: false, nameFilter: false, deptFilter: false });
   const [lightboxImage, setLightboxImage] = useState(null); // { url, name }
   const [fetchingProgress, setFetchingProgress] = useState(0);
 
@@ -92,6 +95,26 @@ const AllTasks = () => {
   // Infinite Scroll Tracking
   const [visibleCount, setVisibleCount] = useState(50);
   const loadingRef = useRef(null);
+  const nameDropdownRef = useRef(null);
+  const dateDropdownRef = useRef(null);
+  const deptDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (nameDropdownRef.current && !nameDropdownRef.current.contains(event.target)) {
+        setDropdownOpen(prev => ({ ...prev, nameFilter: false }));
+      }
+      if (dateDropdownRef.current && !dateDropdownRef.current.contains(event.target)) {
+        setDropdownOpen(prev => ({ ...prev, dateFilter: false }));
+      }
+      if (deptDropdownRef.current && !deptDropdownRef.current.contains(event.target)) {
+        setDropdownOpen(prev => ({ ...prev, deptFilter: false }));
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const statusDateColumn = activeTab === "repair" ? "created_at" : "planned_date";
   // Use planned_date for checklist/delegation sort — task_start_date is same for all occurrences of a recurring task
@@ -106,12 +129,16 @@ const AllTasks = () => {
       try {
         const [holidaysRes, usersRes, workingDaysRes] = await Promise.all([
           supabase.from('holidays').select('holiday_date'),
-          supabase.from('users').select('user_name').eq('status', 'active').order('user_name', { ascending: true }),
+          supabase.from('users').select('user_name, department').eq('status', 'active').order('user_name', { ascending: true }),
           supabase.from('working_day_calender').select('working_date')
         ]);
 
         if (holidaysRes.data) setHolidaysList(holidaysRes.data.map(h => h.holiday_date));
-        if (usersRes.data) setAllUsers(usersRes.data.map(u => u.user_name));
+        if (usersRes.data) {
+          setAllUsers(usersRes.data);
+          const depts = [...new Set(usersRes.data.map(u => u.department))].filter(d => d).sort();
+          setAllDepartments(depts);
+        }
         if (workingDaysRes.data) setWorkingDaysList(workingDaysRes.data.map(w => w.working_date));
       } catch (err) {
         console.error("Error fetching initial data:", err);
@@ -501,6 +528,23 @@ const AllTasks = () => {
     fetchData();
   }, [fetchData]);
 
+  const uniqueNamesFromData = useMemo(() => {
+    const data = showHistory ? historyData : tasks;
+    const nameField = activeTab === "repair" ? "assigned_person" : (activeTab === "ea" ? "doer_name" : "name");
+    const names = new Set();
+    
+    // Get all names that actually have tasks in the current view
+    data.forEach(t => {
+      if (t[nameField]) names.add(t[nameField]);
+    });
+
+    let result = Array.from(names);
+
+
+
+    return result.sort();
+  }, [tasks, historyData, showHistory, activeTab, deptFilter, allUsers]);
+
   // Filtering Logic
   const filteredPendingTasks = useMemo(() => {
     // Multi-level sort: Priority Group (Overdue > Today > Upcoming) → Date
@@ -530,6 +574,17 @@ const AllTasks = () => {
         : true;
 
       if (!matchesSearch) return false;
+
+      // Name Filter
+      if (nameFilter !== "all") {
+        const nameField = activeTab === "repair" ? "assigned_person" : (activeTab === "ea" ? "doer_name" : "name");
+        if (task[nameField] !== nameFilter) return false;
+      }
+
+      // Department Filter
+      if (deptFilter !== "all") {
+        if (task.department !== deptFilter) return false;
+      }
 
       const taskDateValue = task[statusDateColumn];
       const status = taskDateValue ? getTimeStatus(taskDateValue, task.status) : null;
@@ -570,7 +625,7 @@ const AllTasks = () => {
 
       return true;
     });
-  }, [tasks, searchTerm, activeTab, dateFilter, sortDateColumn, statusDateColumn, getTimeStatus]);
+  }, [tasks, searchTerm, activeTab, dateFilter, sortDateColumn, statusDateColumn, getTimeStatus, nameFilter, deptFilter]);
 
   const filteredHistoryTasks = useMemo(() => {
     const completionField = "submission_date";
@@ -599,9 +654,20 @@ const AllTasks = () => {
         }
       }
 
+      // Name Filter
+      if (nameFilter !== "all") {
+        const nameField = activeTab === "repair" ? "assigned_person" : (activeTab === "ea" ? "doer_name" : "name");
+        if (task[nameField] !== nameFilter) return false;
+      }
+
+      // Department Filter
+      if (deptFilter !== "all") {
+        if (task.department !== deptFilter) return false;
+      }
+
       return matchesSearch && matchesDateRange;
     });
-  }, [historyData, searchTerm, startDate, endDate, activeTab]);
+  }, [historyData, searchTerm, startDate, endDate, activeTab, nameFilter, deptFilter]);
 
   // Handle Selections
   const handleSelectItem = useCallback((id, isChecked) => {
@@ -1054,6 +1120,7 @@ const AllTasks = () => {
                   setSelectedItems(new Set());
                   setSearchTerm("");
                   setDateFilter("all");
+                  setNameFilter("all");
                 }} />
               </div>
 
@@ -1086,9 +1153,85 @@ const AllTasks = () => {
                     )}
                   </button>
 
+                  <div className="relative" ref={deptDropdownRef}>
+                    <button
+                      onClick={() => setDropdownOpen(prev => ({ ...prev, deptFilter: !prev.deptFilter }))}
+                      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all shadow-sm ${deptFilter !== 'all' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200'}`}
+                    >
+                      <Filter className="h-3 w-3" />
+                      <span className="truncate max-w-[80px]">{deptFilter === 'all' ? 'Dept' : deptFilter}</span>
+                      <ChevronDown size={14} className={`transition-transform ${dropdownOpen?.deptFilter ? 'rotate-180' : ''}`} />
+                    </button>
+                    {dropdownOpen?.deptFilter && (
+                      <div className="absolute z-50 mt-2 w-48 right-0 rounded-xl bg-white shadow-xl border border-gray-100 py-1 overflow-auto max-h-64 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <button
+                          onClick={() => {
+                            setDeptFilter('all');
+                            setNameFilter('all');
+                            setDropdownOpen(prev => ({ ...prev, deptFilter: false }));
+                          }}
+                          className={`block w-full text-left px-4 py-2 text-xs font-bold transition-colors ${deptFilter === 'all' ? 'bg-purple-50 text-purple-700 border-l-2 border-purple-500' : 'text-gray-600 hover:bg-gray-50'}`}
+                        >
+                          All Departments
+                        </button>
+                        {allDepartments.map((dept) => (
+                          <button
+                            key={dept}
+                            onClick={() => {
+                              setDeptFilter(dept);
+                              setNameFilter('all');
+                              setDropdownOpen(prev => ({ ...prev, deptFilter: false }));
+                            }}
+                            className={`block w-full text-left px-4 py-2 text-xs font-bold transition-colors ${deptFilter === dept ? 'bg-purple-50 text-purple-700 border-l-2 border-purple-500' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {dept}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+
+
+                  <div className="relative" ref={nameDropdownRef}>
+                    <button
+                      onClick={() => setDropdownOpen(prev => ({ ...prev, nameFilter: !prev.nameFilter }))}
+                      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all shadow-sm ${nameFilter !== 'all' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200'}`}
+                    >
+                      <Users className="h-3 w-3" />
+                      <span className="truncate max-w-[80px]">{nameFilter === 'all' ? 'Users' : nameFilter}</span>
+                      <ChevronDown size={14} className={`transition-transform ${dropdownOpen?.nameFilter ? 'rotate-180' : ''}`} />
+                    </button>
+                    {dropdownOpen?.nameFilter && (
+                      <div className="absolute z-50 mt-2 w-48 right-0 rounded-xl bg-white shadow-xl border border-gray-100 py-1 overflow-auto max-h-64 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <button
+                          onClick={() => {
+                            setNameFilter('all');
+                            setDropdownOpen(prev => ({ ...prev, nameFilter: false }));
+                          }}
+                          className={`block w-full text-left px-4 py-2 text-xs font-bold transition-colors ${nameFilter === 'all' ? 'bg-purple-50 text-purple-700 border-l-2 border-purple-500' : 'text-gray-600 hover:bg-gray-50'}`}
+                        >
+                          All Users
+                        </button>
+                        {uniqueNamesFromData.map((name) => (
+                          <button
+                            key={name}
+                            onClick={() => {
+                              setNameFilter(name);
+                              setDropdownOpen(prev => ({ ...prev, nameFilter: false }));
+                            }}
+                            className={`block w-full text-left px-4 py-2 text-xs font-bold transition-colors ${nameFilter === name ? 'bg-purple-50 text-purple-700 border-l-2 border-purple-500' : 'text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {!showHistory && (
                     <>
-                      <div className="relative">
+                      <div className="relative" ref={dateDropdownRef}>
                         <button
                           onClick={() => setDropdownOpen(prev => ({ ...prev, dateFilter: !prev.dateFilter }))}
                           className={`flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all shadow-sm ${dateFilter !== 'all' ? 'bg-purple-600 text-white border-purple-600' : 'bg-white text-gray-600 border-gray-200'}`}

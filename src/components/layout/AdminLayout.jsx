@@ -25,6 +25,7 @@ import {
   CrossIcon,
   X,
   Bell,
+  Video,
 } from "lucide-react";
 
 export default function AdminLayout({ children, darkMode, toggleDarkMode, showLayout = true }) {
@@ -281,6 +282,13 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
       active: location.pathname.includes("/dashboard/setting"),
       // Only show for super admin (username = 'admin')
       showFor: isSuperAdmin ? ["admin"] : [],
+    },
+    {
+      href: "/dashboard/training-video",
+      label: "Training Video",
+      icon: Video,
+      active: location.pathname === "/dashboard/training-video",
+      showFor: ["admin", "user", "HOD"],
     },
   ];
 

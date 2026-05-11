@@ -432,11 +432,7 @@ export default function QuickTask() {
       return newData;
     });
 
-    // If department changes, refresh doers list
-    if (field === 'department') {
-      const doers = await fetchUniqueDoerNameDataApi(value);
-      setDoersList(doers);
-    }
+
   };
 
   const handleAttachmentChange = (index, field, value) => {

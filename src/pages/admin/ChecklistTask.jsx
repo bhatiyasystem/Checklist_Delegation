@@ -141,8 +141,7 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
                             name="department"
                             value={task.department}
                             onChange={(e) => {
-                                onUpdate(task.id, { department: e.target.value, doer: "" });
-                                dispatch(uniqueDoerNameData(e.target.value));
+                                onUpdate(task.id, { department: e.target.value });
                             }}
                             className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all text-sm"
                         >
@@ -211,6 +210,7 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
                             <option value="video">Video (Link)</option>
                             <option value="pdf">PDF (Link)</option>
                             <option value="link">Web Link</option>
+                            <option value="rule">Rule (Text)</option>
                         </select>
                     </div>
                     {task.references && task.references.map((ref, i) => {
@@ -237,8 +237,8 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
                                 ) : (
                                     <div className="flex-1 flex items-center gap-2">
                                         <input
-                                            type="url"
-                                            placeholder="https://"
+                                            type={ref.type === 'rule' ? "text" : "url"}
+                                            placeholder={ref.type === 'rule' ? "Enter rule description..." : "https://"}
                                             value={ref.link}
                                             onChange={(e) => {
                                                 const newRefs = [...task.references];
@@ -373,7 +373,7 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
 
                     <div>
                         <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide flex items-center gap-1">
-                            <Clock className="w-3 h-3" /> Duration <span className="text-red-500">*</span>
+                            <Clock className="w-3 h-3" /> Duration
                         </label>
                         <div className="relative">
                             <input
@@ -447,6 +447,7 @@ export default function ChecklistTask() {
         };
         fetchHolidays();
         dispatch(uniqueDepartmentData());
+        dispatch(uniqueDoerNameData());
         dispatch(uniqueGivenByData());
         dispatch(customDropdownDetails());
 
@@ -592,16 +593,14 @@ export default function ChecklistTask() {
                 if (!t.doer || !t.date || (!t.description && !t.recordedAudio && (!t.references || t.references.length === 0))) {
                     return { success: false, message: `Task ${i + 1}: Please fill in Doer, Date, and at least one instructional detail (Desc, Voice Note, or Reference).` };
                 }
-                if (!t.duration) {
-                    return { success: false, message: `Task ${i + 1}: Please specify the task duration.` };
-                }
+
                 if (t.references && t.references.length > 0) {
                     for (const ref of t.references) {
                         if (ref.type === 'image' && !ref.file) {
                             return { success: false, message: `Task ${i + 1}: Please upload the Image file for the Reference.` };
                         }
-                        if (['video', 'pdf', 'link'].includes(ref.type) && !ref.link) {
-                            return { success: false, message: `Task ${i + 1}: Please provide a valid web link for the ${ref.type.toUpperCase()} Reference.` };
+                        if (['video', 'pdf', 'link', 'rule'].includes(ref.type) && !ref.link) {
+                            return { success: false, message: `Task ${i + 1}: Please provide valid ${ref.type === 'rule' ? 'text content' : 'web link'} for the ${ref.type.toUpperCase()} Reference.` };
                         }
                     }
                 }
@@ -664,18 +663,15 @@ export default function ChecklistTask() {
                 alert(`Task ${i + 1}: Please fill in Doer, Date, and at least one instructional detail (Desc, Voice Note, or Reference).`);
                 return;
             }
-            if (!t.duration) {
-                alert(`Task ${i + 1}: Please specify the task duration.`);
-                return;
-            }
+
             if (t.references && t.references.length > 0) {
                 for (const ref of t.references) {
                     if (ref.type === 'image' && !ref.file) {
                         alert(`Task ${i + 1}: Please upload the Image file for the Reference.`);
                         return;
                     }
-                    if (['video', 'pdf', 'link'].includes(ref.type) && !ref.link) {
-                        alert(`Task ${i + 1}: Please provide a valid web link for the ${ref.type.toUpperCase()} Reference.`);
+                    if (['video', 'pdf', 'link', 'rule'].includes(ref.type) && !ref.link) {
+                        alert(`Task ${i + 1}: Please provide valid ${ref.type === 'rule' ? 'text content' : 'web link'} for the ${ref.type.toUpperCase()} Reference.`);
                         return;
                     }
                 }
@@ -746,7 +742,7 @@ export default function ChecklistTask() {
 
                             resultsUrls.push(publicUrlData.publicUrl);
                             resultsTypes.push(ref.type);
-                        } else if (['video', 'pdf', 'link'].includes(ref.type) && ref.link) {
+                        } else if (['video', 'pdf', 'link', 'rule'].includes(ref.type) && ref.link) {
                             resultsUrls.push(ref.link);
                             resultsTypes.push(ref.type);
                         }

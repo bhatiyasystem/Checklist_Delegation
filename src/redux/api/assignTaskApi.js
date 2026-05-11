@@ -4,29 +4,17 @@ export const fetchUniqueDepartmentDataApi = async () => {
   try {
     console.log("🔍 Fetching unique departments from users table...");
 
-    // Fetch all user_access values for active users
     const { data, error } = await supabase
       .from("users")
-      .select("user_access")
-      .eq("status", "active")
-      .not("user_access", "is", null);
+      .select("department")
+      .not("department", "is", null);
 
     if (error) throw error;
 
-    const role = localStorage.getItem('role');
-    const userAccess = localStorage.getItem('user_access');
-
     // Filter out nulls/empties and get unique values
-    let uniqueDepartments = [...new Set(data
-      .map(item => item.user_access)
-      .filter(dept => dept && dept.trim() !== "")
-    )].sort();
-
-    // HODs should see all departments now per user request
-    // if (role === 'HOD' && userAccess && userAccess !== 'all') {
-    //   const allowedDepts = userAccess.split(',').map(d => d.trim().toLowerCase());
-    //   uniqueDepartments = uniqueDepartments.filter(d => allowedDepts.includes(d.toLowerCase()));
-    // }
+    const uniqueDepartments = [...new Set(data.map(item => item.department.trim()))]
+      .filter(dept => dept !== "")
+      .sort();
 
     console.log("✅ Unique departments found:", uniqueDepartments);
     return uniqueDepartments;
@@ -93,11 +81,6 @@ export const fetchUniqueDoerNameDataApi = async (department) => {
       .from("users")
       .select("user_name, user_access, status, leave_date, leave_end_date, reported_by, can_self_assign")
       .order("user_name", { ascending: true });
-
-    if (department) {
-      // Fetch users where user_access matches or contains the department
-      query = query.ilike("user_access", `%${department}%`);
-    }
 
     const { data, error } = await query;
 
