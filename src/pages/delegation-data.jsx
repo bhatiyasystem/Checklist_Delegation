@@ -38,7 +38,9 @@ function DelegationPage({
   departments = [],
   givenByList = [],
   doersList = [],
-  onEdit = null
+  doersList = [],
+  onEdit = null,
+  skipFetch = false
 }) {
   const { showToast } = useMagicToast();
   const [error, setError] = useState(null)
@@ -308,10 +310,10 @@ function DelegationPage({
   }, [])
 
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized && !skipFetch) {
       dispatch(uniqueDelegationTaskData({}))
     }
-  }, [dispatch, isInitialized])
+  }, [dispatch, isInitialized, skipFetch])
 
   const filteredTasks = useMemo(() => {
     let filtered = delegationTasks;

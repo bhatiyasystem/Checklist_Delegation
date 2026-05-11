@@ -120,7 +120,6 @@ export default function QuickTask() {
   useEffect(() => {
     dispatch(fetchUsers());
     dispatch(resetChecklistPagination());
-    dispatch(uniqueChecklistTaskData({ page: 0, pageSize: 50 }));
 
     // Fetch dropdown data
     const fetchDropdownData = async () => {
@@ -706,15 +705,6 @@ export default function QuickTask() {
                     setSelectedTasks([]);
                     setEditingTaskId(null);
                     setEditFormData({});
-                    if (tab.id === 'checklist') {
-                      dispatch(resetChecklistPagination());
-                      dispatch(uniqueChecklistTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm, deptFilter, personFilter }));
-                    } else if (tab.id === 'delegation') {
-                      dispatch(resetDelegationPagination());
-                      dispatch(uniqueDelegationTaskData({ page: 0, pageSize: 50, dateFilter, nameFilter: searchTerm, deptFilter, personFilter }));
-                    } else {
-                      dispatch(maintenanceData({ page: 1, frequency: freqFilter, searchTerm: searchTerm, deptFilter, personFilter }));
-                    }
                   }}
                 >
                   {tab.label}
@@ -778,12 +768,7 @@ export default function QuickTask() {
         </div>
       )}
 
-      {loading && activeTab === 'delegation' && (
-        <div className="mt-8 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-purple-500 mb-2"></div>
-          <p className="text-purple-600">Loading delegation data...</p>
-        </div>
-      )}
+
 
       {!error && (
         <>
@@ -1226,6 +1211,7 @@ export default function QuickTask() {
               departments={departments}
               givenByList={givenByList}
               doersList={doersList}
+              skipFetch={true}
               onSelectionChange={(taskOrAll, allTasks) => {
                 if (taskOrAll === 'ALL') {
                   if (selectedTasks.length === allTasks.length) setSelectedTasks([]);
