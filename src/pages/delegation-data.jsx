@@ -38,7 +38,6 @@ function DelegationPage({
   departments = [],
   givenByList = [],
   doersList = [],
-  doersList = [],
   onEdit = null,
   skipFetch = false
 }) {
