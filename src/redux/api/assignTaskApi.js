@@ -2,24 +2,21 @@ import supabase from "../../SupabaseClient";
 
 export const fetchUniqueDepartmentDataApi = async () => {
   try {
-    console.log("🔍 Fetching unique departments from users table...");
-
     const { data, error } = await supabase
-      .from("users")
-      .select("department")
-      .not("department", "is", null);
+      .from('departments')
+      .select('name')
+      .order('name', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching department data:", error);
+      return [];
+    }
 
-    // Filter out nulls/empties and get unique values
-    const uniqueDepartments = [...new Set(data.map(item => item.department.trim()))]
-      .filter(dept => dept !== "")
-      .sort();
-
-    console.log("✅ Unique departments found:", uniqueDepartments);
+    // Return an array of department names (strings)
+    const uniqueDepartments = data ? data.map(item => item.name) : [];
     return uniqueDepartments;
   } catch (error) {
-    console.error("❌ Error fetching departments from users table:", error);
+    console.error("Error from Supabase:", error);
     return [];
   }
 };
