@@ -18,8 +18,11 @@ const isAudioUrl = (url) => {
   );
 };
 
-const StatCard = ({ icon: Icon, label, value, color }) => (
-    <div className="bg-white rounded-xl p-2 shadow-sm border border-gray-100 flex items-center gap-2 w-full min-w-0">
+const StatCard = ({ icon: Icon, label, value, color, onClick }) => (
+    <div 
+        onClick={onClick}
+        className={`bg-white rounded-xl p-2 shadow-sm border border-gray-100 flex items-center gap-2 w-full min-w-0 ${onClick ? 'cursor-pointer hover:shadow-md active:scale-95 transition-all' : ''}`}
+    >
         <div className={`p-1.5 rounded-lg ${color} bg-opacity-10 flex-shrink-0`}>
             <Icon className={`h-4 w-4 ${color.replace('bg-', 'text-')}`} />
         </div>
@@ -30,7 +33,7 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
     </div>
 )
 
-export default function MaintenanceView({ stats: originalStats, chartData, tasks = [] }) {
+export default function MaintenanceView({ stats: originalStats, chartData, tasks = [], onCardClick }) {
     const [maintFilter, setMaintFilter] = useState('all');
     const [isSaving, setIsSaving] = useState(false);
     const [viewerOpen, setViewerOpen] = useState(false);
@@ -241,10 +244,34 @@ export default function MaintenanceView({ stats: originalStats, chartData, tasks
                 {/* Cards Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <StatCard icon={Settings} label="Total Machines" value={processedData?.totalMachines || 0} color="bg-blue-500" />
-                    <StatCard icon={Calendar} label="Total Tasks" value={processedData?.totalTasksCount || 0} color="bg-indigo-500" />
-                    <StatCard icon={CheckCircle} label="Tasks Complete" value={processedData?.completedCount || 0} color="bg-green-500" />
-                    <StatCard icon={Clock} label="Tasks Pending" value={processedData?.pendingCount || 0} color="bg-amber-500" />
-                    <StatCard icon={AlertTriangle} label="Tasks Overdue" value={processedData?.overdueCount || 0} color="bg-red-500" />
+                    <StatCard 
+                        icon={Calendar} 
+                        label="Total Tasks" 
+                        value={processedData?.totalTasksCount || 0} 
+                        color="bg-indigo-500" 
+                        onClick={() => onCardClick?.('analyzed')}
+                    />
+                    <StatCard 
+                        icon={CheckCircle} 
+                        label="Tasks Complete" 
+                        value={processedData?.completedCount || 0} 
+                        color="bg-green-500" 
+                        onClick={() => onCardClick?.('completed')}
+                    />
+                    <StatCard 
+                        icon={Clock} 
+                        label="Tasks Pending" 
+                        value={processedData?.pendingCount || 0} 
+                        color="bg-amber-500" 
+                        onClick={() => onCardClick?.('pending')}
+                    />
+                    <StatCard 
+                        icon={AlertTriangle} 
+                        label="Tasks Overdue" 
+                        value={processedData?.overdueCount || 0} 
+                        color="bg-red-500" 
+                        onClick={() => onCardClick?.('overdue')}
+                    />
                     <StatCard icon={IndianRupee} label="Total Cost" value={`₹${processedData?.totalCost || 0}`} color="bg-purple-500" />
                 </div>
 

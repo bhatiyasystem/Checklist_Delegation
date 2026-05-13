@@ -11,7 +11,8 @@ export const fetchDashboardDataApi = async (
   taskView = 'recent',
   departmentFilter = null,
   startDate = null,
-  endDate = null
+  endDate = null,
+  searchQuery = ''
 ) => {
   try {
     console.log('Fetching dashboard data:', { dashboardType, staffFilter, page, limit, taskView, departmentFilter });
@@ -26,8 +27,16 @@ export const fetchDashboardDataApi = async (
     // Use ascending order for checklist/delegation/maintenance to show oldest/most overdue first
     const isAscending = (dashboardType === 'checklist' || dashboardType === 'delegation' || dashboardType === 'maintenance');
 
+    const tableMap = {
+      'checklist': 'checklist',
+      'delegation': 'delegation',
+      'maintenance': 'maintenance_tasks',
+      'repair': 'repair_tasks'
+    };
+    const tableName = tableMap[dashboardType] || dashboardType;
+
     let query = supabase
-      .from(dashboardType)
+      .from(tableName)
       .select('*')
       .order(dateColumn, { ascending: isAscending })
       .range(from, to);
@@ -56,6 +65,18 @@ export const fetchDashboardDataApi = async (
       query = query.eq('name', staffFilter);
     }
 
+    // Apply search query if provided
+    if (searchQuery) {
+      const search = `%${searchQuery}%`;
+      if (dashboardType === 'maintenance') {
+        query = query.or(`machine_name.ilike.${search},part_name.ilike.${search},name.ilike.${search},task_description.ilike.${search}`);
+      } else if (dashboardType === 'repair') {
+        query = query.or(`machine_name.ilike.${search},issue_description.ilike.${search},filled_by.ilike.${search},assigned_person.ilike.${search}`);
+      } else {
+        query = query.or(`title.ilike.${search},name.ilike.${search},department.ilike.${search}`);
+      }
+    }
+
     // Apply task view filtering on server side
     switch (taskView) {
       case 'recent':
@@ -81,6 +102,23 @@ export const fetchDashboardDataApi = async (
         if (dashboardType === 'delegation') {
           query = query.neq('status', 'done');
         }
+        break;
+
+      case 'completed':
+        // All completed tasks
+        query = query.not('submission_date', 'is', null);
+        break;
+
+      case 'pending':
+        // Today's tasks that are not completed
+        query = query.gte(dateColumn, `${today}T00:00:00`)
+          .lte(dateColumn, `${today}T23:59:59`)
+          .is('submission_date', null);
+        break;
+
+      case 'analyzed':
+        // All tasks up to today (including completed and overdue)
+        query = query.lte(dateColumn, `${today}T23:59:59`);
         break;
 
       case 'all':

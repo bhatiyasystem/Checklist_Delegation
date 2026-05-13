@@ -16,8 +16,11 @@ const isAudioUrl = (url) => {
     );
 };
 
-const StatCard = ({ icon: Icon, label, value, color }) => (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col gap-1 relative overflow-hidden min-w-0">
+const StatCard = ({ icon: Icon, label, value, color, onClick }) => (
+    <div 
+        onClick={onClick}
+        className={`bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col gap-1 relative overflow-hidden min-w-0 ${onClick ? 'cursor-pointer hover:shadow-md active:scale-95 transition-all' : ''}`}
+    >
         <div className={`absolute top-0 right-0 w-16 h-16 -mr-4 -mt-4 rounded-full ${color} opacity-5`}></div>
         <div className="flex justify-between items-start z-10">
             <div className="min-w-0 flex-1">
@@ -31,7 +34,7 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
     </div>
 )
 
-export default function RepairView({ tasks = [] }) {
+export default function RepairView({ tasks = [], onCardClick }) {
     const dispatch = useDispatch();
     const [searchQuery, setSearchQuery] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -193,8 +196,20 @@ export default function RepairView({ tasks = [] }) {
         <div className="space-y-6 pb-8 overflow-x-hidden w-full max-w-full">
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard icon={FileText} label="Total Indents" value={tasks.length} color="bg-blue-500" />
-                <StatCard icon={CheckCircle} label="Repairs Completed" value={completedTasksCount} color="bg-green-500" />
+                <StatCard 
+                    icon={FileText} 
+                    label="Total Indents" 
+                    value={tasks.length} 
+                    color="bg-blue-500" 
+                    onClick={() => onCardClick?.('analyzed')}
+                />
+                <StatCard 
+                    icon={CheckCircle} 
+                    label="Repairs Completed" 
+                    value={completedTasksCount} 
+                    color="bg-green-500" 
+                    onClick={() => onCardClick?.('completed')}
+                />
                 <StatCard icon={IndianRupee} label="Total Repair Cost" value={`₹${totalCost.toLocaleString()}`} color="bg-orange-500" />
             </div>
 

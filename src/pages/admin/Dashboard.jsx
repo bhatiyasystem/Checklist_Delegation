@@ -31,6 +31,7 @@ import MaintenanceView from "./dashboard/views/MaintenanceView.jsx"
 import RepairView from "./dashboard/views/RepairView.jsx"
 import EAView from "./dashboard/views/EAView.jsx"
 import TaskManagementTabs from "../../components/TaskManagementTabs.jsx"
+import TaskModal from "./dashboard/TaskModal.jsx"
 
 export default function AdminDashboard() {
   const [dashboardType, setDashboardType] = useState("checklist")
@@ -41,6 +42,8 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
   const [dashboardStaffFilter, setDashboardStaffFilter] = useState("all")
   const [availableStaff, setAvailableStaff] = useState([])
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
+  const [selectedTaskType, setSelectedTaskType] = useState(null)
   const userRole = localStorage.getItem("role")
   const username = localStorage.getItem("user-name")
 
@@ -1192,6 +1195,10 @@ export default function AdminDashboard() {
             setFilterStaff={setFilterStaff}
             departmentData={departmentData}
             getTasksByView={getTasksByView}
+            onCardClick={(type) => {
+              setSelectedTaskType(type);
+              setIsTaskModalOpen(true);
+            }}
             getFrequencyColor={getFrequencyColor}
             isLoadingMore={isLoadingMore}
             hasMoreData={hasMoreData}
@@ -1207,17 +1214,46 @@ export default function AdminDashboard() {
         )}
 
         {mainTab === "maintenance" && (
-          <MaintenanceView stats={displayStats} tasks={departmentData.allTasks} />
+          <MaintenanceView 
+            stats={displayStats} 
+            tasks={departmentData.allTasks} 
+            onCardClick={(type) => {
+              setSelectedTaskType(type);
+              setIsTaskModalOpen(true);
+            }}
+          />
         )}
 
         {mainTab === "repair" && (
-          <RepairView stats={displayStats} tasks={departmentData.allTasks} />
+          <RepairView 
+            stats={displayStats} 
+            tasks={departmentData.allTasks} 
+            onCardClick={(type) => {
+              setSelectedTaskType(type);
+              setIsTaskModalOpen(true);
+            }}
+          />
         )}
 
         {mainTab === "ea" && (
           <EAView />
         )}
       </div>
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        title={
+          selectedTaskType === "analyzed" ? "Analyzed Tasks (Up to Today)" :
+          selectedTaskType === "completed" ? "Completed Tasks" :
+          selectedTaskType === "pending" ? "Due Today (Active)" :
+          selectedTaskType === "overdue" ? "Overdue Tasks (Action Required)" : "Tasks"
+        }
+        type={selectedTaskType}
+        dashboardType={mainTab === "default" ? dashboardType : mainTab}
+        staffFilter={dashboardStaffFilter}
+        departmentFilter={departmentFilter}
+        dateRange={dateRange}
+      />
     </AdminLayout>
   )
 }

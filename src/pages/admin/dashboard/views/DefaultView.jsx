@@ -24,6 +24,7 @@ export default function DefaultView({
     departmentFilter,
     parseTaskStartDate,
     userRole,
+    onCardClick, // New prop
 }) {
     return (
         <div className="space-y-4">
@@ -34,6 +35,7 @@ export default function DefaultView({
                 overdueTask={displayStats.overdueTasks}
                 notDoneTask={notDoneTask}
                 dashboardType={dashboardType}
+                onCardClick={onCardClick}
                 dateRange={dateRange.filtered ? dateRange : null}
             />
 
