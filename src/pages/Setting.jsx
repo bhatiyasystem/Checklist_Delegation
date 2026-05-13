@@ -649,8 +649,9 @@ const Setting = () => {
 
       // Critical: Update localStorage if the edited user is the current logged-in user
       if (updatedUser.user_name === localStorage.getItem("user-name")) {
-        console.log("Updating current user's localStorage image");
+        console.log("Updating current user's localStorage image and permissions");
         localStorage.setItem("profile_image", imageUrl || "");
+        localStorage.setItem("can_self_assign", updatedUser.can_self_assign ? "true" : "false");
         // Refresh to update all layouts immediately
         window.location.reload();
       }

@@ -64,6 +64,24 @@ const LoginPage = () => {
           }
         }
 
+        let canSelfAssign = userData.can_self_assign;
+
+        // Fallback: If RPC didn't return can_self_assign, fetch it directly
+        if (canSelfAssign === undefined || canSelfAssign === null) {
+          try {
+            const { data: permissionData } = await supabase
+              .from('users')
+              .select('can_self_assign')
+              .eq('user_name', userData.user_name || userData.username)
+              .single();
+            if (permissionData) {
+              canSelfAssign = permissionData.can_self_assign;
+            }
+          } catch (err) {
+            console.error("Error fetching self-assign permission:", err);
+          }
+        }
+
         // Store all user data in localStorage
         localStorage.setItem('user-name', userData.user_name || userData.username || "");
         localStorage.setItem('user-id', userData.id || "");
@@ -71,7 +89,7 @@ const LoginPage = () => {
         localStorage.setItem('email_id', userData.email_id || userData.email || "");
         localStorage.setItem('user_access', userData.user_access || "");
         localStorage.setItem('profile_image', userData.profile_image || "");
-        localStorage.setItem('can_self_assign', userData.can_self_assign === true ? "true" : "false");
+        localStorage.setItem('can_self_assign', canSelfAssign === true ? "true" : "false");
         localStorage.setItem('designation', designation);
 
         console.log("Stored email:", userData.email_id || userData.email); // Debug log

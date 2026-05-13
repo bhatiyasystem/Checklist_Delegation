@@ -38,12 +38,24 @@ import { MagicToastProvider } from "./context/MagicToastContext"
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     const username = (localStorage.getItem("user-name") || "").toLowerCase();
     const role = (localStorage.getItem("role") || "").toLowerCase();
+    const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
+    const path = window.location.pathname;
 
     if (!username) {
         return <Navigate to="/login" replace />
     }
 
+    console.log(`🛣️ Route Guard: ${path} | Role: ${role} | SelfAssign: ${canSelfAssign}`);
+
+    // Special Case: Allow 'user' role for assign-task and checklist if canSelfAssign is enabled
+    if (path.startsWith("/dashboard/assign-task") || path.startsWith("/dashboard/checklist")) {
+        if (role === "user" && canSelfAssign) {
+            return children;
+        }
+    }
+
     if (allowedRoles.length > 0 && !allowedRoles.map(r => r.toLowerCase()).includes(role)) {
+        console.warn(`🛑 Route Guard: Access denied to ${path} for role ${role}`);
         return <Navigate to="/dashboard/admin" replace />
     }
 
@@ -100,7 +112,7 @@ function App() {
                     <Route
                         path="/dashboard/assign-task"
                         element={
-                            <ProtectedRoute allowedRoles={["admin", "HOD"]}>
+                            <ProtectedRoute allowedRoles={["admin", "HOD", "user"]}>
                                 <AdminAssignTask />
                             </ProtectedRoute>
                         }

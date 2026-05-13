@@ -96,7 +96,7 @@ export const fetchUniqueDoerNameDataApi = async (department) => {
     data?.forEach(user => {
       const uName = (user.user_name || "").toLowerCase();
       if (uName && !seenNames.has(uName)) {
-        // Apply HOD filtering: only show themselves or their reports
+        // Apply HOD/USER filtering
         if (role === 'HOD' && username) {
           const reportedBy = (user.reported_by || "").toLowerCase();
           if (reportedBy !== username && uName !== username) {
@@ -105,6 +105,13 @@ export const fetchUniqueDoerNameDataApi = async (department) => {
 
           // If it's the HOD themselves, check if they have self-assign rights
           if (uName === username && !user.can_self_assign) {
+            return;
+          }
+        }
+
+        if (role === 'USER' && username) {
+          // ONLY show themselves, and only if they have self-assign rights
+          if (uName !== username) {
             return;
           }
         }

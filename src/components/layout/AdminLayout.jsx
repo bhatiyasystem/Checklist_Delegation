@@ -77,10 +77,47 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
     ];
 
     const storedRoleLower = (storedRole || "user").toLowerCase();
+    const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
 
-    if (storedRoleLower === "user" && restrictedPages.some(p => path.startsWith(p))) {
-      navigate("/dashboard/admin");
-      return;
+    console.log(`🛡️ SECURITY GUARD DEBUG:
+      Path: "${path}"
+      Role: "${storedRoleLower}"
+      CanSelfAssign: ${canSelfAssign}
+    `);
+
+    // Case 1: USER role
+    if (storedRoleLower === "user") {
+      if (canSelfAssign) {
+        // Authorized users can access a subset of pages
+        const userAllowedPages = [
+          "/dashboard/admin",
+          "/dashboard/notifications",
+          "/dashboard/assign-task",
+          "/dashboard/checklist",
+          "/dashboard/delegation",
+          "/dashboard/task",
+          "/dashboard/calendar",
+          "/dashboard/training-video"
+        ];
+        const isAllowed = userAllowedPages.some(p => path.startsWith(p));
+        console.log(`🔍 User Allowed Check: Path "${path}" matches allowed list: ${isAllowed}`);
+        
+        if (!isAllowed) {
+          console.warn("🚫 Security: User with SelfAssign redirected from unauthorized page:", path);
+          navigate("/dashboard/admin");
+          return;
+        }
+      } else {
+        // Non-authorized users are blocked from restricted pages
+        const isRestricted = restrictedPages.some(p => path.startsWith(p));
+        console.log(`🔍 User Restricted Check: Path "${path}" is restricted: ${isRestricted}`);
+        
+        if (isRestricted) {
+          console.warn("🚫 Security: User WITHOUT SelfAssign redirected from restricted page:", path);
+          navigate("/dashboard/admin");
+          return;
+        }
+      }
     }
 
     if (storedRoleLower === "hod") {
@@ -214,7 +251,7 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
       label: "Assign Task",
       icon: CheckSquare,
       active: location.pathname === "/dashboard/assign-task",
-      showFor: ["admin", "HOD"],
+      showFor: ["admin", "HOD", "user"],
     },
     {
       href: "/dashboard/delegation",
@@ -315,7 +352,14 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
         if (route.label === "Holiday") {
             return isSuperAdmin || userRoleNormalized === "admin";
         }
-        return route.showFor.some(role => role.toLowerCase() === userRoleNormalized);
+        if (route.href === "/dashboard/assign-task") {
+          const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
+          console.log(`🔍 Sidebar Filter: Checking ${route.label} for ${userRoleNormalized}. CanSelfAssign=${canSelfAssign}`);
+          if (userRoleNormalized === "user") return canSelfAssign;
+        }
+
+        const isAllowed = route.showFor.some(role => role.toLowerCase() === userRoleNormalized);
+        return isAllowed;
       })
       .map(route => {
         if (route.subItems) {
@@ -779,7 +823,11 @@ export default function AdminLayout({ children, darkMode, toggleDarkMode, showLa
             <span className="text-[10px] mt-1 font-bold">Tasks</span>
           </Link>
 
-          {(userRole?.toUpperCase() === "ADMIN" || userRole?.toUpperCase() === "HOD") && (
+          {(() => {
+            const showAddButton = (userRole?.toUpperCase() === "ADMIN" || userRole?.toUpperCase() === "HOD" || (userRole?.toLowerCase() === "user" && localStorage.getItem("can_self_assign") === "true"));
+            console.log(`📱 Mobile Nav Debug: Role=${userRole}, CanSelfAssign=${localStorage.getItem("can_self_assign")}, ShowAddButton=${showAddButton}`);
+            return showAddButton;
+          })() && (
             <div className="relative -mt-12">
               <Link
                 to="/dashboard/assign-task"

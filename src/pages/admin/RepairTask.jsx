@@ -102,15 +102,14 @@ function RepairTaskCard({ task, index, total, givenBy, userData, machineOptions,
                 <div>
                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wide">Assign From (Filled By) <span className="text-red-500">*</span></label>
                     <select
-                        name="filledBy"
-                        value={task.filledBy}
-                        onChange={handleChange}
-                        disabled={(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin"))}
-                        className={`w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm ${(localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? 'opacity-70 cursor-not-allowed' : ''}`}
-                    >
-                        <option value="">Select person...</option>
-                        {givenBy.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
+                            name="filledBy"
+                            value={task.filledBy}
+                            onChange={handleChange}
+                            className={`w-full p-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none bg-gray-50 focus:bg-white transition-all text-sm`}
+                        >
+                            <option value="">Select person...</option>
+                            {givenBy.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
                 </div>
 
                 {/* Machine Name & Assign To */}

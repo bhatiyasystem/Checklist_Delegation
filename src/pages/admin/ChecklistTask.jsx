@@ -108,6 +108,13 @@ function TaskCard({ task, index, total, department, doerName, givenBy, dispatch,
                 if (dName === currentU && !user.can_self_assign) return false;
             }
 
+            if (currentR === "user") {
+                const dName = (user.user_name || user.name || "").toLowerCase().trim();
+                // ONLY show themselves, and only if they have self-assign rights
+                if (dName !== currentU) return false;
+                if (!user.can_self_assign) return false;
+            }
+
             return true;
         });
     };
@@ -434,7 +441,7 @@ export default function ChecklistTask() {
     const [tasks, setTasks] = useState([
         {
             ...defaultTask(),
-            givenBy: (localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : ""
+            givenBy: (localStorage.getItem("role")?.toUpperCase() === "HOD" || localStorage.getItem("role")?.toLowerCase() === "user" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : ""
         }
     ]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -481,7 +488,7 @@ export default function ChecklistTask() {
         return [...prev, {
             ...defaultTask(),
             department: lastTask?.department || "",
-            givenBy: (localStorage.getItem("role")?.toUpperCase() === "HOD" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : (lastTask?.givenBy || ""),
+            givenBy: (localStorage.getItem("role")?.toUpperCase() === "HOD" || localStorage.getItem("role")?.toLowerCase() === "user" || (localStorage.getItem("role")?.toLowerCase() === "admin" && localStorage.getItem("user-name")?.toLowerCase() !== "admin")) ? localStorage.getItem("user-name") : (lastTask?.givenBy || ""),
             doer: lastTask?.doer || ""
         }];
     });

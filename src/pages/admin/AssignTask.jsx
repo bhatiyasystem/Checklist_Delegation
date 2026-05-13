@@ -8,12 +8,16 @@ export default function AssignTask() {
 
   useEffect(() => {
     const role = (localStorage.getItem("role") || "").toLowerCase();
-    if (role === "user") {
+    const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
+    console.log(`📌 AssignTask Entry Guard: Role=${role}, CanSelfAssign=${canSelfAssign}`);
+    if (role === "user" && !canSelfAssign) {
+      console.warn("🚫 AssignTask: Unauthorized 'user' role redirected to admin");
       navigate("/dashboard/admin");
     }
   }, [navigate]);
 
   const role = (localStorage.getItem("role") || "").toLowerCase();
+  const canSelfAssign = localStorage.getItem("can_self_assign") === "true";
   const designation = (localStorage.getItem("designation") || "").toLowerCase();
   const isMachineOperator = designation.includes("machin") || designation.includes("operat") || designation.includes("oprat");
 
@@ -65,6 +69,10 @@ export default function AssignTask() {
   ];
 
   const modules = allModules.filter(mod => {
+    if (role === "user") {
+      // Users can only access checklist for self-assignment
+      return mod.id === "checklist";
+    }
     if (role === "hod") {
       if (mod.id === "checklist") return true;
       if (mod.id === "repair" && isMachineOperator) return true;
