@@ -157,8 +157,8 @@ const TaskModal = ({ isOpen, onClose, type, title, dashboardType, staffFilter, d
             </button>
           </div>
 
-          {/* Filters/Search Area */}
-          <div className="p-4 bg-gray-50/50 border-b border-gray-100">
+          {/* Filters/Search Area - Commented out as requested */}
+          {/* <div className="p-4 bg-gray-50/50 border-b border-gray-100">
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-purple-500 transition-colors" />
               <input
@@ -174,7 +174,7 @@ const TaskModal = ({ isOpen, onClose, type, title, dashboardType, staffFilter, d
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Content Area */}
           <div 
