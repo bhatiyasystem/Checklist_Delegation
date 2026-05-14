@@ -27,7 +27,7 @@ import { insertDelegationDoneAndUpdate } from "../redux/api/delegationApi";
 import { sendUrgentTaskNotification, sendTaskExtensionNotification, isWhatsAppConnected } from "../services/whatsappService";
 import { useMagicToast } from "../context/MagicToastContext";
 import RenderDescription, { MediaViewer } from "../components/RenderDescription";
-import logo from "../assets/Ace_Logoo.jpg";
+import logo from "../assets/bhatiya_Logo.jpg";
 
 // Configuration object - Move all configurations here
 const CONFIG = {
@@ -1088,7 +1088,7 @@ function DelegationDataPage() {
               height: 100%;
               z-index: -100;
               pointer-events: none;
-              background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Ctext transform='rotate(-30, 150, 100)' x='50' y='100' fill='rgba(124, 58, 237, 0.1)' font-size='25' font-family='Inter, sans-serif' font-weight='900'%3EACE MARK%3C/text%3E%3C/svg%3E");
+              background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Ctext transform='rotate(-30, 150, 100)' x='50' y='100' fill='rgba(124, 58, 237, 0.1)' font-size='25' font-family='Inter, sans-serif' font-weight='900'%3EBHATIA ENTERPRISES%3C/text%3E%3C/svg%3E");
               background-repeat: repeat;
             }
           </style>
