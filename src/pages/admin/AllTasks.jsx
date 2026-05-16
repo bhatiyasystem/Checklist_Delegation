@@ -57,6 +57,7 @@ const AllTasks = () => {
   const [tableHeaders, setTableHeaders] = useState([]);
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [uploadedImages, setUploadedImages] = useState({});
+  const [imagePreviews, setImagePreviews] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [remarksData, setRemarksData] = useState({});
@@ -84,7 +85,9 @@ const AllTasks = () => {
     workDone: "",
     vendorName: "",
     workPhoto: null,
-    billCopy: null
+    workPhotoPreview: null,
+    billCopy: null,
+    billCopyPreview: null
   });
 
   const [username, setUsername] = useState("");
@@ -378,7 +381,7 @@ const AllTasks = () => {
           }
           break;
         case "ea":
-          tableName = "ea_tasks";
+          tableName = showHistory ? "ea_tasks_done" : "ea_tasks";
           dateColumn = showHistory ? "updated_at" : "planned_date";
           completionField = "status";
           nameField = "doer_name";
@@ -397,10 +400,28 @@ const AllTasks = () => {
             headers.push({ id: "updated_at", label: "Submitted" });
           }
           break;
+        case "delegation":
+          tableName = "delegation";
+          dateColumn = "task_start_date";
+          completionField = "submission_date";
+          headers = [
+            { id: "time_status", label: "Time" },
+            { id: "id", label: "ID" },
+            { id: "task_description", label: "Description" },
+            { id: "department", label: "Dept" },
+            { id: "given_by", label: "Given By" },
+            { id: "name", label: "Name" },
+            { id: "planned_date", label: "Planned" },
+            { id: "frequency", label: "Freq" },
+            { id: "enable_reminder", label: "Remind" },
+            { id: "require_attachment", label: "Attach" },
+            { id: "status", label: "Status" },
+          ];
+          break;
         case "checklist":
         default:
           tableName = "checklist";
-          dateColumn = "task_start_date"; // task_start_date = original admin start date; used for lte filter in query
+          dateColumn = "task_start_date";
           completionField = "submission_date";
           headers = [
             { id: "time_status", label: "Time" },
@@ -438,16 +459,26 @@ const AllTasks = () => {
           }
         }
 
-        // Checklist, Maintenance, Repair, EA all have a field for the assigned person
-        // Repair uses assigned_person, EA uses doer_name, others use name
+        // Apply reporting users filter
         query = query.in(nameField, reportingUsers);
+      }
+
+      // Apply specific name filter if selected
+      if (nameFilter !== "all") {
+        query = query.eq(nameField, nameFilter);
+      }
+
+      // Apply department filter if selected
+      if (deptFilter !== "all") {
+        query = query.eq("department", deptFilter);
       }
 
       if (showHistory) {
         if (activeTab === "repair") {
           query = query.not("submission_date", "is", null).order("submission_date", { ascending: false });
         } else if (activeTab === "ea") {
-          query = supabase.from("ea_tasks_done").select("*").order("created_at", { ascending: false });
+          // Table already set to ea_tasks_done
+          query = query.order("created_at", { ascending: false });
         } else {
           query = query.not(completionField, "is", null).order(completionField, { ascending: false });
         }
@@ -457,8 +488,7 @@ const AllTasks = () => {
         } else if (activeTab === "ea") {
           query = query.in("status", ["pending", "extend", "extended"]).order("task_start_date", { ascending: true });
         } else if (activeTab === "checklist" || activeTab === "delegation" || activeTab === "maintenance") {
-          // Pre-filter: Don't fetch absurdly old records, keep UI fast and avoid freezing.
-          // Fetch overdue (up to 1.5 years back) to upcoming tasks (up to 6 months forward)
+          // Default range: 1.5 years back to 6 months forward
           const pastDate = new Date();
           pastDate.setFullYear(pastDate.getFullYear() - 1);
           pastDate.setMonth(pastDate.getMonth() - 6);
@@ -466,11 +496,25 @@ const AllTasks = () => {
           const futureDate = new Date();
           futureDate.setMonth(futureDate.getMonth() + 6);
 
-          query = query
-            .is(completionField, null)
-            .gte('planned_date', pastDate.toISOString().split('T')[0] + 'T00:00:00')
-            .lte('planned_date', futureDate.toISOString().split('T')[0] + 'T23:59:59')
-            .order('planned_date', { ascending: true });
+          const today = new Date();
+          const todayStart = today.toISOString().split('T')[0] + 'T00:00:00';
+          const todayEnd = today.toISOString().split('T')[0] + 'T23:59:59';
+
+          query = query.is(completionField, null);
+
+          // Apply date filter logic
+          if (dateFilter === "today") {
+            query = query.gte('planned_date', todayStart).lte('planned_date', todayEnd);
+          } else if (dateFilter === "overdue") {
+            query = query.gte('planned_date', pastDate.toISOString().split('T')[0] + 'T00:00:00').lt('planned_date', todayStart);
+          } else if (dateFilter === "upcoming") {
+            query = query.gt('planned_date', todayEnd).lte('planned_date', futureDate.toISOString().split('T')[0] + 'T23:59:59');
+          } else {
+            // "all" - current default range
+            query = query.gte('planned_date', pastDate.toISOString().split('T')[0] + 'T00:00:00').lte('planned_date', futureDate.toISOString().split('T')[0] + 'T23:59:59');
+          }
+
+          query = query.order('planned_date', { ascending: true });
         }
       }
 
@@ -522,7 +566,7 @@ const AllTasks = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [username, userRole, activeTab, showHistory, holidaysList, workingDaysList, searchTerm, dateFilter]);
+  }, [username, userRole, activeTab, showHistory, holidaysList, workingDaysList, searchTerm, dateFilter, nameFilter, deptFilter]);
 
   useEffect(() => {
     fetchData();
@@ -575,32 +619,8 @@ const AllTasks = () => {
 
       if (!matchesSearch) return false;
 
-      // Name Filter
-      if (nameFilter !== "all") {
-        const nameField = activeTab === "repair" ? "assigned_person" : (activeTab === "ea" ? "doer_name" : "name");
-        if (task[nameField] !== nameFilter) return false;
-      }
-
-      // Department Filter
-      if (deptFilter !== "all") {
-        if (task.department !== deptFilter) return false;
-      }
-
       const taskDateValue = task[statusDateColumn];
       const status = taskDateValue ? getTimeStatus(taskDateValue, task.status) : null;
-
-      // Apply the dropdown date filter
-      if (taskDateValue && status) {
-        if (dateFilter === "all") {
-          // Show all: overdue + today + upcoming
-        } else if (dateFilter === "today") {
-          if (status !== "Today") return false;
-        } else if (dateFilter === "overdue") {
-          if (status !== "Overdue") return false;
-        } else if (dateFilter === "upcoming") {
-          if (status !== "Upcoming") return false;
-        }
-      }
 
       // Smart deduplication for checklist, delegation, and maintenance tabs
       if (activeTab === "checklist" || activeTab === "delegation" || activeTab === "maintenance") {
@@ -654,17 +674,6 @@ const AllTasks = () => {
         }
       }
 
-      // Name Filter
-      if (nameFilter !== "all") {
-        const nameField = activeTab === "repair" ? "assigned_person" : (activeTab === "ea" ? "doer_name" : "name");
-        if (task[nameField] !== nameFilter) return false;
-      }
-
-      // Department Filter
-      if (deptFilter !== "all") {
-        if (task.department !== deptFilter) return false;
-      }
-
       return matchesSearch && matchesDateRange;
     });
   }, [historyData, searchTerm, startDate, endDate, activeTab, nameFilter, deptFilter]);
@@ -685,6 +694,14 @@ const AllTasks = () => {
         setUploadedImages((prevI) => {
           const n = { ...prevI };
           delete n[id];
+          return n;
+        });
+        setImagePreviews((prevP) => {
+          const n = { ...prevP };
+          if (n[id]) {
+            URL.revokeObjectURL(n[id]);
+            delete n[id];
+          }
           return n;
         });
         setStatusData((prevS) => {
@@ -711,6 +728,9 @@ const AllTasks = () => {
         setSelectedItems(new Set());
         setRemarksData({});
         setUploadedImages({});
+        // Clean up previews
+        Object.values(imagePreviews).forEach(url => URL.revokeObjectURL(url));
+        setImagePreviews({});
         setStatusData({});
       }
     }, [filteredPendingTasks, dateFilter, activeTab, getTimeStatus]);
@@ -755,10 +775,17 @@ const AllTasks = () => {
   const handleImageUpload = useCallback((id, e) => {
     const file = e.target.files[0];
     if (file) {
+      // Clean up old preview if exists
+      if (imagePreviews[id]) {
+        URL.revokeObjectURL(imagePreviews[id]);
+      }
+      
+      const previewUrl = URL.createObjectURL(file);
       setUploadedImages((prev) => ({ ...prev, [id]: file }));
+      setImagePreviews((prev) => ({ ...prev, [id]: previewUrl }));
       setSuccessMessage(`File selected for task ID: ${id}`);
     }
-  }, []);
+  }, [imagePreviews]);
 
   const uploadFile = async (id, file) => {
     const bucketName = activeTab;
@@ -782,7 +809,9 @@ const AllTasks = () => {
       remarks: task.remarks || "",
       vendorName: task.vendor_name || "",
       workPhoto: null,
-      billCopy: null
+      workPhotoPreview: null,
+      billCopy: null,
+      billCopyPreview: null
     });
     setIsModalOpen(true);
   };
@@ -1051,6 +1080,9 @@ const AllTasks = () => {
       setSelectedItems(new Set());
       setRemarksData({});
       setUploadedImages({});
+      // Clean up previews
+      Object.values(imagePreviews).forEach(url => URL.revokeObjectURL(url));
+      setImagePreviews({});
       setStatusData({});
       setExtendedDateData({});
       fetchData();
@@ -1124,8 +1156,8 @@ const AllTasks = () => {
                 }} />
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 flex-grow justify-end">
-                <div className="relative flex-grow max-w-sm">
+              <div className="flex flex-wrap items-center gap-2 flex-grow justify-start sm:justify-end">
+                <div className="relative w-full sm:max-w-sm">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                   <input
                     type="text"
@@ -1136,7 +1168,7 @@ const AllTasks = () => {
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
                   <button
                     onClick={() => {
                       setShowHistory(!showHistory);
@@ -1640,33 +1672,65 @@ const AllTasks = () => {
                                         disabled={!selectedItems.has(task.id)}
                                       />
                                     </td>
-                                    <td className="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-800 bg-emerald-50/30">
+                                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-gray-800 bg-emerald-50/30 min-w-[220px]">
                                       <div className="flex flex-col gap-2">
-                                        <label className={`flex items-center gap-2 cursor-pointer text-xs font-medium transition-colors ${selectedItems.has(task.id) ? "text-purple-600 hover:text-purple-800" : "text-gray-400 cursor-not-allowed"}`}>
-                                          <Upload className="h-3.5 w-3.5" />
-                                          <span>
-                                            {uploadedImages[task.id] ? "File Selected" : (task.require_attachment || task.attachment) ? <span>Upload Proof <span className="text-red-500 font-bold">*</span></span> : "Upload Proof"}
-                                          </span>
-                                          <input
-                                            type="file"
-                                            className="hidden"
-                                            onChange={(e) => handleImageUpload(task.id, e)}
-                                            disabled={!selectedItems.has(task.id)}
-                                          />
-                                        </label>
-                                        <label className={`flex items-center gap-2 cursor-pointer text-xs font-medium transition-colors ${selectedItems.has(task.id) ? "text-cyan-500 hover:text-cyan-700" : "text-gray-400 cursor-not-allowed"}`}>
-                                          <Camera className="h-3.5 w-3.5" />
-                                          <span>
-                                            {uploadedImages[task.id] ? "Photo Captured" : (task.require_attachment || task.attachment) ? <span>Take Photo <span className="text-red-500 font-bold">*</span></span> : "Take Photo"}
-                                          </span>
-                                          <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={(e) => handleImageUpload(task.id, e)}
-                                            disabled={!selectedItems.has(task.id)}
-                                          />
-                                        </label>
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex flex-col gap-2 flex-grow">
+                                            <label className={`flex items-center gap-2 cursor-pointer text-xs font-medium transition-colors ${selectedItems.has(task.id) ? "text-purple-600 hover:text-purple-800" : "text-gray-400 cursor-not-allowed"}`}>
+                                              <Upload className="h-3.5 w-3.5" />
+                                              <span>
+                                                {uploadedImages[task.id] ? "File Selected" : (task.require_attachment || task.attachment) ? <span>Upload Proof <span className="text-red-500 font-bold">*</span></span> : "Upload Proof"}
+                                              </span>
+                                              <input
+                                                type="file"
+                                                className="hidden"
+                                                onChange={(e) => handleImageUpload(task.id, e)}
+                                                disabled={!selectedItems.has(task.id)}
+                                              />
+                                            </label>
+                                            <label className={`flex items-center gap-2 cursor-pointer text-xs font-medium transition-colors ${selectedItems.has(task.id) ? "text-cyan-500 hover:text-cyan-700" : "text-gray-400 cursor-not-allowed"}`}>
+                                              <Camera className="h-3.5 w-3.5" />
+                                              <span>
+                                                {uploadedImages[task.id] ? "Photo Captured" : (task.require_attachment || task.attachment) ? <span>Take Photo <span className="text-red-500 font-bold">*</span></span> : "Take Photo"}
+                                              </span>
+                                              <input
+                                                type="file"
+                                                accept="image/*"
+                                                className="hidden"
+                                                onChange={(e) => handleImageUpload(task.id, e)}
+                                                disabled={!selectedItems.has(task.id)}
+                                              />
+                                            </label>
+                                          </div>
+                                          {imagePreviews[task.id] && (
+                                            <div className="relative group flex-shrink-0">
+                                              <img
+                                                src={imagePreviews[task.id]}
+                                                alt="Preview"
+                                                className="w-12 h-12 object-cover rounded-lg border border-purple-200 shadow-sm cursor-zoom-in group-hover:scale-105 transition-transform"
+                                                onClick={() => setLightboxImage({ url: imagePreviews[task.id], name: "Uploaded Preview" })}
+                                              />
+                                              <button
+                                                onClick={() => {
+                                                  URL.revokeObjectURL(imagePreviews[task.id]);
+                                                  setImagePreviews(prev => {
+                                                    const n = { ...prev };
+                                                    delete n[task.id];
+                                                    return n;
+                                                  });
+                                                  setUploadedImages(prev => {
+                                                    const n = { ...prev };
+                                                    delete n[task.id];
+                                                    return n;
+                                                  });
+                                                }}
+                                                className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                              >
+                                                <X size={10} />
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     </td>
                                   </>
@@ -1908,17 +1972,47 @@ const AllTasks = () => {
                                   className="w-full text-xs border-gray-200 rounded-md py-1.5 px-3 focus:outline-none focus:ring-1 focus:ring-purple-400"
                                 />
                               </div>
-                              <div className="flex gap-2">
-                                <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-xs font-medium transition-all ${selectedItems.has(task.id) ? "border-purple-200 bg-purple-50 text-purple-600 active:scale-95" : "border-gray-100 bg-gray-50 text-gray-400 grayscale"}`}>
-                                  <Upload className="h-3.5 w-3.5" />
-                                  <span>{uploadedImages[task.id] ? "Selected" : "Upload"}</span>
-                                  <input type="file" className="hidden" onChange={(e) => handleImageUpload(task.id, e)} disabled={!selectedItems.has(task.id)} />
-                                </label>
-                                <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-xs font-medium transition-all ${selectedItems.has(task.id) ? "border-cyan-200 bg-cyan-50 text-cyan-500 active:scale-95" : "border-gray-100 bg-gray-50 text-gray-400 grayscale"}`}>
-                                  <Camera className="h-3.5 w-3.5" />
-                                  <span>Photo</span>
-                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(task.id, e)} disabled={!selectedItems.has(task.id)} />
-                                </label>
+                              <div className="flex flex-col gap-2">
+                                <div className="flex gap-2">
+                                  <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-xs font-medium transition-all ${selectedItems.has(task.id) ? "border-purple-200 bg-purple-50 text-purple-600 active:scale-95" : "border-gray-100 bg-gray-50 text-gray-400 grayscale"}`}>
+                                    <Upload className="h-3.5 w-3.5" />
+                                    <span>{uploadedImages[task.id] ? "Selected" : "Upload"}</span>
+                                    <input type="file" className="hidden" onChange={(e) => handleImageUpload(task.id, e)} disabled={!selectedItems.has(task.id)} />
+                                  </label>
+                                  <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-xs font-medium transition-all ${selectedItems.has(task.id) ? "border-cyan-200 bg-cyan-50 text-cyan-500 active:scale-95" : "border-gray-100 bg-gray-50 text-gray-400 grayscale"}`}>
+                                    <Camera className="h-3.5 w-3.5" />
+                                    <span>Photo</span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(task.id, e)} disabled={!selectedItems.has(task.id)} />
+                                  </label>
+                                </div>
+                                {imagePreviews[task.id] && (
+                                  <div className="relative group">
+                                    <img
+                                      src={imagePreviews[task.id]}
+                                      alt="Preview"
+                                      className="w-full h-32 object-cover rounded-lg border border-purple-200 shadow-sm"
+                                      onClick={() => setLightboxImage({ url: imagePreviews[task.id], name: "Uploaded Preview" })}
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        URL.revokeObjectURL(imagePreviews[task.id]);
+                                        setImagePreviews(prev => {
+                                          const n = { ...prev };
+                                          delete n[task.id];
+                                          return n;
+                                        });
+                                        setUploadedImages(prev => {
+                                          const n = { ...prev };
+                                          delete n[task.id];
+                                          return n;
+                                        });
+                                      }}
+                                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
@@ -2107,21 +2201,96 @@ const AllTasks = () => {
                         ></textarea>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
-                        <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                          <Upload className="h-6 w-6 text-gray-400 mb-2" />
-                          <span className="text-xs font-bold text-gray-500">
-                            Photo of Work Done
-                            {(selectedUpdateTask.require_attachment || selectedUpdateTask.attachment) && <span className="text-red-500 ml-1">*</span>}
-                          </span>
-                          <span className="text-[10px] text-gray-400 mt-1">{updateForm.workPhoto ? updateForm.workPhoto.name : "Click to upload"}</span>
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => setUpdateForm({ ...updateForm, workPhoto: e.target.files[0] })} />
-                        </label>
-                        <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
-                          <Upload className="h-6 w-6 text-gray-400 mb-2" />
-                          <span className="text-xs font-bold text-gray-500">Bill Copy</span>
-                          <span className="text-[10px] text-gray-400 mt-1">{updateForm.billCopy ? updateForm.billCopy.name : "Click to upload"}</span>
-                          <input type="file" className="hidden" accept="image/*" onChange={(e) => setUpdateForm({ ...updateForm, billCopy: e.target.files[0] })} />
-                        </label>
+                        <div className="flex flex-col gap-2">
+                          <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors h-full">
+                            <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                            <span className="text-xs font-bold text-gray-500 text-center">
+                              Photo of Work Done
+                              {(selectedUpdateTask.require_attachment || selectedUpdateTask.attachment) && <span className="text-red-500 ml-1">*</span>}
+                            </span>
+                            <span className="text-[10px] text-gray-400 mt-1 text-center truncate w-full">{updateForm.workPhoto ? updateForm.workPhoto.name : "Click to upload"}</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  if (updateForm.workPhotoPreview) URL.revokeObjectURL(updateForm.workPhotoPreview);
+                                  setUpdateForm({
+                                    ...updateForm,
+                                    workPhoto: file,
+                                    workPhotoPreview: URL.createObjectURL(file)
+                                  });
+                                }
+                              }}
+                            />
+                          </label>
+                          {updateForm.workPhotoPreview && (
+                            <div className="relative group">
+                              <img
+                                src={updateForm.workPhotoPreview}
+                                alt="Work Preview"
+                                className="w-full h-32 object-cover rounded-lg border border-purple-200 shadow-sm"
+                                onClick={() => setLightboxImage({ url: updateForm.workPhotoPreview, name: "Work Photo Preview" })}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  URL.revokeObjectURL(updateForm.workPhotoPreview);
+                                  setUpdateForm({ ...updateForm, workPhoto: null, workPhotoPreview: null });
+                                }}
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-sm"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                          <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors h-full">
+                            <Upload className="h-6 w-6 text-gray-400 mb-2" />
+                            <span className="text-xs font-bold text-gray-500 text-center">Bill Copy</span>
+                            <span className="text-[10px] text-gray-400 mt-1 text-center truncate w-full">{updateForm.billCopy ? updateForm.billCopy.name : "Click to upload"}</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  if (updateForm.billCopyPreview) URL.revokeObjectURL(updateForm.billCopyPreview);
+                                  setUpdateForm({
+                                    ...updateForm,
+                                    billCopy: file,
+                                    billCopyPreview: URL.createObjectURL(file)
+                                  });
+                                }
+                              }}
+                            />
+                          </label>
+                          {updateForm.billCopyPreview && (
+                            <div className="relative group">
+                              <img
+                                src={updateForm.billCopyPreview}
+                                alt="Bill Preview"
+                                className="w-full h-32 object-cover rounded-lg border border-blue-200 shadow-sm"
+                                onClick={() => setLightboxImage({ url: updateForm.billCopyPreview, name: "Bill Copy Preview" })}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  URL.revokeObjectURL(updateForm.billCopyPreview);
+                                  setUpdateForm({ ...updateForm, billCopy: null, billCopyPreview: null });
+                                }}
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-sm"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
