@@ -7,7 +7,7 @@ import supabase from "../SupabaseClient";
 
 
 // Master toggle to enable/disable WhatsApp messaging
-const IS_WHATSAPP_ENABLED = false; // Set to true to enable WhatsApp messages
+const IS_WHATSAPP_ENABLED = true; // Set to true to enable WhatsApp messages
 
 // WhatsApp API Configuration (Meta Cloud API)
 const WHATSAPP_API_URL = import.meta.env.VITE_WHATSAPP_API_URL || 'https://graph.facebook.com/v21.0';
@@ -467,7 +467,7 @@ export const sendEATaskNotification = async (taskDetails) => {
  */
 export const sendDelegationTaskNotification = async (taskDetails) => {
     try {
-        const { doerName, taskId, description, startDate, givenBy, department, duration } = taskDetails;
+        const { doerName, taskId, description, startDate, givenBy, department, duration, attachmentRequired } = taskDetails;
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
@@ -476,13 +476,30 @@ export const sendDelegationTaskNotification = async (taskDetails) => {
         const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
         const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
 
-        // Template: new_task_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} department, {{4}} description, {{5}} startDate, {{6}} givenBy, {{7}} link
+        // Template: new_task_assign (APPROVED)
+        // Variables:
+        // {{1}} doerName - Person assigned to the task
+        // {{2}} givenBy - Person who assigned the task
+        // {{3}} department - Department name
+        // {{4}} description - Task description
+        // {{5}} startDate - Task start date
+        // {{6}} duration - Basis (e.g., "urgent", "weekly", "monthly")
+        // {{7}} reminders - Reminder information
+        // {{8}} attachmentRequired - Whether attachment is required (Yes/No)
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'new_task_notification',
-            [doerName, taskId, department || 'N/A', displayDescription, startDate, givenBy, APP_LINK],
-            'en_US' // User specified en_US for this template
+            'new_task_assign',
+            [
+                doerName,                    // {{1}} - Task assignee
+                givenBy,                     // {{2}} - Task assignor
+                department || 'N/A',         // {{3}} - Department
+                displayDescription || 'N/A', // {{4}} - Task description
+                startDate || 'N/A',          // {{5}} - Start date
+                duration || 'standard',      // {{6}} - Basis (urgent/weekly/monthly)
+                'Set reminders as needed',   // {{7}} - Reminders
+                attachmentRequired ? 'Yes' : 'No' // {{8}} - Attachment required
+            ],
+            'en' // Language code
         );
 
         if (sent && audioUrl) {
@@ -516,12 +533,24 @@ export const sendTaskExtensionNotification = async (taskDetails) => {
             ? `🎤 Voice Note: ${audioUrl}`
             : description;
 
-        // Template: task_extend_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} nextExtendDate, {{5}} givenBy, {{6}} link
+        // Template: extend_task_reminder (APPROVED)
+        // Variables:
+        // {{1}} taskId - Task ID
+        // {{2}} doerName - Name of person assigned
+        // {{3}} description - Task description
+        // {{4}} givenBy - Person who assigned the task
+        // {{5}} nextExtendDate - New extended deadline
         const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'task_extend_notification',
-            [doerName, taskId, displayDescription, nextExtendDate, givenBy, APP_LINK]
+            'extend_task_reminder',
+            [
+                taskId || 'N/A',              // {{1}} - Task ID
+                doerName,                     // {{2}} - Name
+                displayDescription || 'N/A',  // {{3}} - Task description
+                givenBy,                      // {{4}} - Given By
+                nextExtendDate || 'N/A'       // {{5}} - Next Extended Date
+            ],
+            'en' // Language code
         );
 
         if (sent && audioUrl) {
@@ -790,17 +819,33 @@ export const sendAdminExtensionRemarkNotification = async (taskDetails) => {
  */
 export const sendDailyTaskSummaryNotification = async (summaryDetails) => {
     try {
-        const { doerName, totalTasks, pendingTasks, todayTasks } = summaryDetails;
+        const { doerName, totalTasks, pendingTasks, todayTasks, focusTasks } = summaryDetails;
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
-        // Template: daily_task_notification
-        // Variables: {{1}} doerName, {{2}} totalTasks, {{3}} pendingTasks, {{4}} todayTasks, {{5}} link
-        return await sendWhatsAppTemplate(
+        // Template: daily_reminder (APPROVED)
+        // Variables:
+        // {{1}} doerName - Person's name
+        // {{2}} totalTasks - Total number of tasks
+        // {{3}} todayTasks - Today's tasks
+        // {{4}} pendingTasks - Pending tasks count
+        // {{5}} focusTasks - Focus tasks for today
+        // {{6}} APP_LINK - Link to complete tasks
+        const sent = await sendWhatsAppTemplate(
             phoneNumber,
-            'daily_task_notification',
-            [doerName, totalTasks, pendingTasks, todayTasks, APP_LINK]
+            'daily_reminder',
+            [
+                doerName,                     // {{1}} - Hello {name}
+                totalTasks || '0',            // {{2}} - Total Tasks
+                todayTasks || '0',            // {{3}} - Today's Tasks
+                pendingTasks || '0',          // {{4}} - Pending Tasks
+                focusTasks || 'No specific tasks', // {{5}} - Focus Tasks for Today
+                APP_LINK                      // {{6}} - Link to complete tasks
+            ],
+            'en' // Language code
         );
+
+        return sent;
     } catch (error) {
         console.error('Error sending daily task summary:', error);
         return false;
