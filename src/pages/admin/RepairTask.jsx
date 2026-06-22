@@ -382,6 +382,7 @@ export default function RepairTask() {
                             givenBy: insertedTask.filled_by,
                             taskType: 'repair',
                             machineName: insertedTask.machine_name,
+                            attachmentRequired: insertedTask.attachment,
                         });
                     }
                 }

@@ -335,139 +335,7 @@ export const sendUrgentTaskNotification = async (taskDetails) => {
  */
 export const sendChecklistTaskNotification = async (taskDetails) => {
     try {
-        const { doerName, taskId, description, startDate, givenBy, department, duration } = taskDetails;
-        const phoneNumber = await getUserPhoneNumber(doerName);
-        if (!phoneNumber) return false;
-
-        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
-        const match = description && description.match(urlRegex);
-        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
-        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
-
-        // Template: checklist_task_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} department, {{4}} description, {{5}} startDate, {{6}} duration, {{7}} givenBy, {{8}} link
-        const sent = await sendWhatsAppTemplate(
-            phoneNumber,
-            'checklist_task_notification',
-            [doerName, taskId, department || 'N/A', displayDescription, startDate, duration || 'N/A', givenBy, APP_LINK]
-        );
-
-        if (sent && audioUrl) {
-            await new Promise(r => setTimeout(r, 1000));
-            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
-        }
-        return sent;
-    } catch (error) {
-        console.error('Error sending checklist notification:', error);
-        return false;
-    }
-};
-
-/**
- * Send maintenance task notification
- */
-export const sendMaintenanceTaskNotification = async (taskDetails) => {
-    try {
-        const { doerName, taskId, description, startDate, givenBy, machineName, partName, department, duration } = taskDetails;
-        const phoneNumber = await getUserPhoneNumber(doerName);
-        if (!phoneNumber) return false;
-
-        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
-        const match = description && description.match(urlRegex);
-        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
-        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
-
-        // Template: maintenance_task_assigned
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} machineName, {{4}} partName, {{5}} department, {{6}} description, {{7}} startDate, {{8}} duration, {{9}} givenBy, {{10}} link
-        const sent = await sendWhatsAppTemplate(
-            phoneNumber,
-            'maintenance_task_assigned',
-            [doerName, taskId, machineName || 'N/A', partName || 'N/A', department || 'N/A', displayDescription, startDate, duration || 'N/A', givenBy, APP_LINK]
-        );
-
-        if (sent && audioUrl) {
-            await new Promise(r => setTimeout(r, 1000));
-            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
-        }
-        return sent;
-    } catch (error) {
-        console.error('Error sending maintenance notification:', error);
-        return false;
-    }
-};
-
-/**
- * Send repair task notification
- */
-export const sendRepairTaskNotification = async (taskDetails) => {
-    try {
-        const { doerName, taskId, description, startDate, givenBy, machineName, department, duration } = taskDetails;
-        const phoneNumber = await getUserPhoneNumber(doerName);
-        if (!phoneNumber) return false;
-
-        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
-        const match = description && description.match(urlRegex);
-        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
-        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
-
-        // Template: repair_task_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} machineName, {{4}} department, {{5}} description, {{6}} startDate, {{7}} duration, {{8}} givenBy, {{9}} link
-        const sent = await sendWhatsAppTemplate(
-            phoneNumber,
-            'repair_task_notification',
-            [doerName, taskId, machineName || 'N/A', department || 'N/A', displayDescription, startDate, duration || 'N/A', givenBy, APP_LINK]
-        );
-
-        if (sent && audioUrl) {
-            await new Promise(r => setTimeout(r, 1000));
-            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
-        }
-        return sent;
-    } catch (error) {
-        console.error('Error sending repair notification:', error);
-        return false;
-    }
-};
-
-/**
- * Send EA task notification
- */
-export const sendEATaskNotification = async (taskDetails) => {
-    try {
-        const { doerName, taskId, description, startDate, givenBy, duration } = taskDetails;
-        const phoneNumber = await getUserPhoneNumber(doerName);
-        if (!phoneNumber) return false;
-
-        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
-        const match = description && description.match(urlRegex);
-        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
-        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
-
-        // Template: ea_task_notification
-        // Variables: {{1}} doerName, {{2}} taskId, {{3}} description, {{4}} startDate, {{5}} duration, {{6}} givenBy, {{7}} link
-        const sent = await sendWhatsAppTemplate(
-            phoneNumber,
-            'ea_task_notification',
-            [doerName, taskId, displayDescription, startDate, duration || 'N/A', givenBy, APP_LINK]
-        );
-
-        if (sent && audioUrl) {
-            await new Promise(r => setTimeout(r, 1000));
-            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
-        }
-        return sent;
-    } catch (error) {
-        console.error('Error sending EA notification:', error);
-        return false;
-    }
-};
-
-/**
- * Send delegation task notification
- */
-export const sendDelegationTaskNotification = async (taskDetails) => {
-    try {
-        const { doerName, taskId, description, startDate, givenBy, department, duration, attachmentRequired } = taskDetails;
+        const { doerName, taskId, description, startDate, givenBy, department, duration, frequency, attachmentRequired } = taskDetails;
         const phoneNumber = await getUserPhoneNumber(doerName);
         if (!phoneNumber) return false;
 
@@ -490,14 +358,203 @@ export const sendDelegationTaskNotification = async (taskDetails) => {
             phoneNumber,
             'new_task_assign',
             [
-                doerName,                    // {{1}} - Task assignee
-                givenBy,                     // {{2}} - Task assignor
-                department || 'N/A',         // {{3}} - Department
-                displayDescription || 'N/A', // {{4}} - Task description
-                startDate || 'N/A',          // {{5}} - Start date
-                duration || 'standard',      // {{6}} - Basis (urgent/weekly/monthly)
-                'Set reminders as needed',   // {{7}} - Reminders
-                attachmentRequired ? 'Yes' : 'No' // {{8}} - Attachment required
+                doerName,                            // {{1}} - Task assignee
+                givenBy,                             // {{2}} - Task assignor
+                department || 'N/A',                 // {{3}} - Department
+                displayDescription || 'N/A',         // {{4}} - Task description
+                startDate || 'N/A',                  // {{5}} - Start date
+                frequency || duration || 'standard', // {{6}} - Basis (daily/weekly/monthly/urgent)
+                'Set reminders as needed',           // {{7}} - Reminders
+                attachmentRequired ? 'Yes' : 'No'    // {{8}} - Attachment required
+            ],
+            'en' // Language code
+        );
+
+        if (sent && audioUrl) {
+            await new Promise(r => setTimeout(r, 1000));
+            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
+        }
+        return sent;
+    } catch (error) {
+        console.error('Error sending checklist notification:', error);
+        return false;
+    }
+};
+
+/**
+ * Send maintenance task notification
+ */
+export const sendMaintenanceTaskNotification = async (taskDetails) => {
+    try {
+        const { doerName, taskId, description, startDate, givenBy, machineName, partName, department, duration, frequency, attachmentRequired } = taskDetails;
+        const phoneNumber = await getUserPhoneNumber(doerName);
+        if (!phoneNumber) return false;
+
+        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
+        const match = description && description.match(urlRegex);
+        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
+        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
+
+        // Construct description to include machineName and partName if relevant
+        let detailedDesc = displayDescription || 'N/A';
+        if (machineName || partName) {
+            detailedDesc = `Machine: ${machineName || 'N/A'}${partName ? `, Part: ${partName}` : ''}. ${displayDescription || ''}`;
+        }
+
+        // Template: new_task_assign (APPROVED)
+        const sent = await sendWhatsAppTemplate(
+            phoneNumber,
+            'new_task_assign',
+            [
+                doerName,                            // {{1}} - Task assignee
+                givenBy,                             // {{2}} - Task assignor
+                department || 'Maintenance',         // {{3}} - Department
+                detailedDesc,                        // {{4}} - Task description
+                startDate || 'N/A',                  // {{5}} - Start date
+                frequency || duration || 'standard', // {{6}} - Basis
+                'Set reminders as needed',           // {{7}} - Reminders
+                attachmentRequired ? 'Yes' : 'No'    // {{8}} - Attachment required
+            ],
+            'en'
+        );
+
+        if (sent && audioUrl) {
+            await new Promise(r => setTimeout(r, 1000));
+            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
+        }
+        return sent;
+    } catch (error) {
+        console.error('Error sending maintenance notification:', error);
+        return false;
+    }
+};
+
+/**
+ * Send repair task notification
+ */
+export const sendRepairTaskNotification = async (taskDetails) => {
+    try {
+        const { doerName, taskId, description, startDate, givenBy, machineName, department, duration, frequency, attachmentRequired } = taskDetails;
+        const phoneNumber = await getUserPhoneNumber(doerName);
+        if (!phoneNumber) return false;
+
+        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
+        const match = description && description.match(urlRegex);
+        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
+        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
+
+        // Construct description to include machineName
+        let detailedDesc = displayDescription || 'N/A';
+        if (machineName) {
+            detailedDesc = `Machine: ${machineName}. ${displayDescription || ''}`;
+        }
+
+        // Template: new_task_assign (APPROVED)
+        const sent = await sendWhatsAppTemplate(
+            phoneNumber,
+            'new_task_assign',
+            [
+                doerName,                            // {{1}} - Task assignee
+                givenBy,                             // {{2}} - Task assignor
+                department || 'Repair',              // {{3}} - Department
+                detailedDesc,                        // {{4}} - Task description
+                startDate || 'N/A',                  // {{5}} - Start date
+                frequency || duration || 'standard', // {{6}} - Basis
+                'Set reminders as needed',           // {{7}} - Reminders
+                attachmentRequired ? 'Yes' : 'No'    // {{8}} - Attachment required
+            ],
+            'en'
+        );
+
+        if (sent && audioUrl) {
+            await new Promise(r => setTimeout(r, 1000));
+            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
+        }
+        return sent;
+    } catch (error) {
+        console.error('Error sending repair notification:', error);
+        return false;
+    }
+};
+
+/**
+ * Send EA task notification
+ */
+export const sendEATaskNotification = async (taskDetails) => {
+    try {
+        const { doerName, taskId, description, startDate, givenBy, duration, frequency, attachmentRequired } = taskDetails;
+        const phoneNumber = await getUserPhoneNumber(doerName);
+        if (!phoneNumber) return false;
+
+        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
+        const match = description && description.match(urlRegex);
+        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
+        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
+
+        // Template: new_task_assign (APPROVED)
+        const sent = await sendWhatsAppTemplate(
+            phoneNumber,
+            'new_task_assign',
+            [
+                doerName,                            // {{1}} - Task assignee
+                givenBy,                             // {{2}} - Task assignor
+                'EA',                                // {{3}} - Department
+                displayDescription || 'N/A',         // {{4}} - Task description
+                startDate || 'N/A',                  // {{5}} - Start date
+                frequency || duration || 'standard', // {{6}} - Basis
+                'Set reminders as needed',           // {{7}} - Reminders
+                attachmentRequired ? 'Yes' : 'No'    // {{8}} - Attachment required
+            ],
+            'en'
+        );
+
+        if (sent && audioUrl) {
+            await new Promise(r => setTimeout(r, 1000));
+            await sendWhatsAppVoiceMessage(phoneNumber, audioUrl);
+        }
+        return sent;
+    } catch (error) {
+        console.error('Error sending EA notification:', error);
+        return false;
+    }
+};
+
+/**
+ * Send delegation task notification
+ */
+export const sendDelegationTaskNotification = async (taskDetails) => {
+    try {
+        const { doerName, taskId, description, startDate, givenBy, department, duration, frequency, attachmentRequired } = taskDetails;
+        const phoneNumber = await getUserPhoneNumber(doerName);
+        if (!phoneNumber) return false;
+
+        const urlRegex = /(https?:\/\/[^\s]+(?:voice-notes|audio-recordings)[^\s]*\.(?:mp3|ogg|wav|webm|m4a)?)/i;
+        const match = description && description.match(urlRegex);
+        const audioUrl = taskDetails.audioUrl || (match ? match[0] : null);
+        const displayDescription = (audioUrl && description?.trim() === audioUrl) ? `🎤 Voice Note: ${audioUrl}` : description;
+
+        // Template: new_task_assign (APPROVED)
+        // Variables:
+        // {{1}} doerName - Person assigned to the task
+        // {{2}} givenBy - Person who assigned the task
+        // {{3}} department - Department name
+        // {{4}} description - Task description
+        // {{5}} startDate - Task start date
+        // {{6}} duration - Basis (e.g., "urgent", "weekly", "monthly")
+        // {{7}} reminders - Reminder information
+        // {{8}} attachmentRequired - Whether attachment is required (Yes/No)
+        const sent = await sendWhatsAppTemplate(
+            phoneNumber,
+            'new_task_assign',
+            [
+                doerName,                            // {{1}} - Task assignee
+                givenBy,                             // {{2}} - Task assignor
+                department || 'N/A',                 // {{3}} - Department
+                displayDescription || 'N/A',         // {{4}} - Task description
+                startDate || 'N/A',                  // {{5}} - Start date
+                frequency || duration || 'standard', // {{6}} - Basis (urgent/weekly/monthly)
+                'Set reminders as needed',           // {{7}} - Reminders
+                attachmentRequired ? 'Yes' : 'No'    // {{8}} - Attachment required
             ],
             'en' // Language code
         );
