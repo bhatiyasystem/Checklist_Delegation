@@ -7,7 +7,7 @@ import supabase from "../SupabaseClient";
 
 
 // Master toggle to enable/disable WhatsApp messaging
-const IS_WHATSAPP_ENABLED = true; // Set to true to enable WhatsApp messages
+const IS_WHATSAPP_ENABLED = false; // Set to true to enable WhatsApp messages
 
 // WhatsApp API Configuration (Meta Cloud API)
 const WHATSAPP_API_URL = import.meta.env.VITE_WHATSAPP_API_URL || 'https://graph.facebook.com/v21.0';
