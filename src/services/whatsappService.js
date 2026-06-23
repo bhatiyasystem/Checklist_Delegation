@@ -10,10 +10,10 @@ import supabase from "../SupabaseClient";
 const IS_WHATSAPP_ENABLED = true; // Set to true to enable WhatsApp messages
 
 // WhatsApp API Configuration (Meta Cloud API)
-const WHATSAPP_API_URL = import.meta.env.VITE_WHATSAPP_API_URL || 'https://graph.facebook.com/v21.0';
-const WHATSAPP_PHONE_NUMBER_ID = import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID;
-const WHATSAPP_ACCESS_TOKEN = import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN;
-const WHATSAPP_WABA_ID = import.meta.env.VITE_WHATSAPP_WABA_ID;
+const WHATSAPP_API_URL = (import.meta.env.VITE_WHATSAPP_API_URL || 'https://graph.facebook.com/v21.0').trim();
+const WHATSAPP_PHONE_NUMBER_ID = (import.meta.env.VITE_WHATSAPP_PHONE_NUMBER_ID || '').trim();
+const WHATSAPP_ACCESS_TOKEN = (import.meta.env.VITE_WHATSAPP_ACCESS_TOKEN || '').trim();
+const WHATSAPP_WABA_ID = (import.meta.env.VITE_WHATSAPP_WABA_ID || '').trim();
 
 const APP_LINK = "https://checklistdelegation.vercel.app/login";
 
