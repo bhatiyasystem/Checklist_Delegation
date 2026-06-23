@@ -11,6 +11,7 @@ import { useMagicToast } from '../context/MagicToastContext';
 import supabase from '../SupabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 
+
 const BulkImport = () => {
   const [activeModule, setActiveModule] = useState('checklist');
   const [csvData, setCsvData] = useState(null);
