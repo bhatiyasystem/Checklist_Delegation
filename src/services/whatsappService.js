@@ -75,12 +75,52 @@ const getUserPhoneNumber = async (username) => {
 };
 
 /**
+ * Inserts a log into the whatsapp_logs table.
+ */
+const insertLog = async (logMeta, recipientPhone, status, errorMessage, messageId, messageContent) => {
+    try {
+        const logEntry = {
+            recipient_name: logMeta.recipientName || 'Unknown',
+            phone_number: recipientPhone,
+            message_type: logMeta.messageType || 'General',
+            stage: logMeta.stage || 'General',
+            message_content: messageContent || logMeta.messageContent || '-',
+            status: status,
+            error_message: errorMessage || null,
+            sender_name: logMeta.senderName || 'System',
+            reference_id: logMeta.referenceId || '-',
+            message_id: messageId || null
+        };
+        const { error } = await supabase.from('whatsapp_logs').insert([logEntry]);
+        if (error) {
+            console.error('WhatsApp Log Insertion Failed:', error.message);
+        } else {
+            console.log('WhatsApp Log Inserted Successfully');
+        }
+    } catch (e) {
+        console.error('Error inserting WhatsApp log:', e);
+    }
+};
+
+/**
  * Send WhatsApp message using Maytapi API
  * @param {string} phoneNumber - Recipient phone number
  * @param {string} message - Message text
+ * @param {Object} logMeta - Logging metadata
  * @returns {Promise<boolean>} - Success status
  */
-const sendWhatsAppMessage = async (phoneNumber, message) => {
+const sendWhatsAppMessage = async (phoneNumber, message, logMeta = {}) => {
+    const formattedPhone = formatPhoneNumber(phoneNumber) || phoneNumber;
+    const finalLogMeta = {
+        recipientName: logMeta.recipientName || 'Admin',
+        messageType: logMeta.messageType || 'Manual Text',
+        stage: logMeta.stage || 'Support',
+        referenceId: logMeta.referenceId || '-',
+        senderName: logMeta.senderName || 'System',
+        messageContent: message,
+        ...logMeta
+    };
+
     try {
         const formattedPhone = formatPhoneNumber(phoneNumber);
         if (!formattedPhone) {
@@ -129,13 +169,16 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
         if (!response.ok) {
             console.error('Meta WhatsApp API Error:', response.status, response.statusText);
             console.error('Meta WhatsApp API Error Response:', JSON.stringify(result, null, 2));
+            await insertLog(finalLogMeta, formattedPhone, 'Failed', result.error?.message || 'API Error', null, message);
             return false;
         }
 
         console.log('✅ WhatsApp message sent successfully via Meta:', result);
+        await insertLog(finalLogMeta, formattedPhone, 'Sent', null, result.messages?.[0]?.id, message);
         return true;
     } catch (error) {
         console.error('Error sending WhatsApp message:', error);
+        await insertLog(finalLogMeta, formattedPhone, 'Failed', error.message || 'Error', null, message);
         return false;
     }
 };
@@ -146,9 +189,21 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
  * @param {string} templateName - Name of the template
  * @param {Array} parameters - Array of parameter values for the template
  * @param {string} languageCode - Language code (default: 'en')
+ * @param {Object} logMeta - Logging metadata
  * @returns {Promise<boolean>} - Success status
  */
-const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], languageCode = 'en') => {
+const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], languageCode = 'en', logMeta = {}) => {
+    const formattedPhone = formatPhoneNumber(phoneNumber) || phoneNumber;
+    const finalLogMeta = {
+        recipientName: logMeta.recipientName || parameters[0] || 'Unknown',
+        messageType: logMeta.messageType || templateName,
+        stage: logMeta.stage || 'Notification',
+        referenceId: logMeta.referenceId || parameters[1] || '-',
+        senderName: logMeta.senderName || parameters[4] || 'System',
+        messageContent: logMeta.messageContent || `Template: ${templateName} | Params: ${parameters.join(' | ')}`,
+        ...logMeta
+    };
+
     try {
         const formattedPhone = formatPhoneNumber(phoneNumber);
         if (!formattedPhone) {
@@ -210,13 +265,16 @@ const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], 
         if (!response.ok) {
             console.error(`Meta Template API Error (${templateName}):`, response.status, response.statusText);
             console.error('Response:', JSON.stringify(result, null, 2));
+            await insertLog(finalLogMeta, formattedPhone, 'Failed', result.error?.message || 'API Error', null, finalLogMeta.messageContent);
             return false;
         }
 
         console.log(`✅ WhatsApp template "${templateName}" sent successfully:`, result);
+        await insertLog(finalLogMeta, formattedPhone, 'Sent', null, result.messages?.[0]?.id, finalLogMeta.messageContent);
         return true;
     } catch (error) {
         console.error(`Error sending WhatsApp template "${templateName}":`, error);
+        await insertLog(finalLogMeta, formattedPhone, 'Failed', error.message || 'Error', null, finalLogMeta.messageContent);
         return false;
     }
 };
@@ -225,9 +283,21 @@ const sendWhatsAppTemplate = async (phoneNumber, templateName, parameters = [], 
  * Send WhatsApp voice message (PTT/Audio) using Maytapi API
  * @param {string} phoneNumber - Recipient phone number
  * @param {string} audioUrl - Public URL of the audio file
+ * @param {Object} logMeta - Logging metadata
  * @returns {Promise<boolean>} - Success status
  */
-const sendWhatsAppVoiceMessage = async (phoneNumber, audioUrl) => {
+const sendWhatsAppVoiceMessage = async (phoneNumber, audioUrl, logMeta = {}) => {
+    const formattedPhone = formatPhoneNumber(phoneNumber) || phoneNumber;
+    const finalLogMeta = {
+        recipientName: logMeta.recipientName || 'User',
+        messageType: logMeta.messageType || 'Voice Note',
+        stage: logMeta.stage || 'Notification',
+        referenceId: logMeta.referenceId || '-',
+        senderName: logMeta.senderName || 'System',
+        messageContent: `🎤 Voice Note: ${audioUrl}`,
+        ...logMeta
+    };
+
     try {
         const formattedPhone = formatPhoneNumber(phoneNumber);
 
@@ -275,15 +345,72 @@ const sendWhatsAppVoiceMessage = async (phoneNumber, audioUrl) => {
         if (!response.ok) {
             console.error('Meta WhatsApp Voice API Error:', response.status, response.statusText);
             console.error('Meta WhatsApp Voice API Error Response:', JSON.stringify(result, null, 2));
+            await insertLog(finalLogMeta, formattedPhone, 'Failed', result.error?.message || 'API Error', null, finalLogMeta.messageContent);
             return false;
         }
 
         console.log('✅ WhatsApp voice message sent successfully via Meta:', result);
+        await insertLog(finalLogMeta, formattedPhone, 'Sent', null, result.messages?.[0]?.id, finalLogMeta.messageContent);
         return true;
     } catch (error) {
         console.error('Error sending WhatsApp voice message:', error);
+        await insertLog(finalLogMeta, formattedPhone, 'Failed', error.message || 'Error', null, finalLogMeta.messageContent);
         return false;
     }
+};
+
+/**
+ * Sends a plain text message (non-template)
+ * Note: Only works if the user has messaged in the last 24 hours.
+ */
+export const sendWhatsAppTextMessage = async (phoneNumber, text, logMeta = {}) => {
+    return sendWhatsAppMessage(phoneNumber, text, logMeta);
+};
+
+export const whatsappLogService = {
+    async fetchLogs() {
+        const { data, error } = await supabase
+            .from('whatsapp_logs')
+            .select('*')
+            .order('created_at', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    },
+
+    subscribeToChanges(callback) {
+        const channel = supabase
+            .channel('whatsapp_logs_changes')
+            .on('postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'whatsapp_logs' },
+                (payload) => callback('INSERT', payload.new)
+            )
+            .on('postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'whatsapp_logs' },
+                (payload) => callback('UPDATE', payload.new)
+            )
+            .subscribe();
+
+        return () => supabase.removeChannel(channel);
+    },
+
+    async markAsRead(ids) {
+        const { error } = await supabase
+            .from('whatsapp_logs')
+            .update({ is_read: true })
+            .in('id', ids);
+        if (error) throw error;
+        return true;
+    },
+
+    async markMessagesAsRead(contactId) {
+        const { error } = await supabase
+            .from('whatsapp_logs')
+            .update({ is_read: true })
+            .eq('is_read', false)
+            .or(`phone_number.eq.${contactId},recipient_name.eq.${contactId}`);
+        if (error) throw error;
+        return true;
+    },
 };
 
 /**
@@ -949,5 +1076,7 @@ export default {
     sendPasswordResetOTP,
     sendAdminExtensionRemarkNotification,
     sendDailyTaskSummaryNotification,
-    sendPurchaseDeliveredNotification
+    sendPurchaseDeliveredNotification,
+    sendWhatsAppTextMessage,
+    whatsappLogService
 };
